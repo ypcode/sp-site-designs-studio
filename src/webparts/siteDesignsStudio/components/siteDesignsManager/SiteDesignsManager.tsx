@@ -12,7 +12,8 @@ import {
 	PrimaryButton,
 	MessageBar,
 	MessageBarType,
-	DialogFooter
+	DialogFooter,
+	ActionButton
 } from 'office-ui-fabric-react';
 import styles from '../SiteDesignsStudio.module.scss';
 import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
@@ -21,7 +22,7 @@ import { escape, assign } from '@microsoft/sp-lodash-subset';
 import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
 import { ISiteScriptContent } from '../../models/ISiteScript';
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
-import { ISiteDesign, SiteDesignEntitySchema } from '../../models/ISiteDesign';
+import { ISiteDesign, SiteDesignEntitySchema, WebTemplate } from '../../models/ISiteDesign';
 import SiteDesignEditor from '../siteDesignEditor/SiteDesignEditor';
 
 export interface ISiteDesignsManagerProps extends IServiceConsumerComponentProps {}
@@ -56,7 +57,7 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 
 	public componentWillMount() {
 		this._loadSiteDesigns().then((siteDesigns) => {
-      console.log('Get Site Designs ', siteDesigns);
+			console.log('Get Site Designs ', siteDesigns);
 			this.setState({
 				siteDesigns: siteDesigns,
 				isLoading: false
@@ -73,9 +74,18 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 		return (
 			<div className={styles.siteDesignsManager}>
 				{userMessage ? (
-					<MessageBar messageBarType={hasError ? MessageBarType.error : MessageBarType.success} >{userMessage}</MessageBar>
+					<MessageBar messageBarType={hasError ? MessageBarType.error : MessageBarType.success}>
+						{userMessage}
+					</MessageBar>
 				) : null}
 				{isEditing ? this._renderSiteDesignEditor() : null}
+				<div className="ms-Grid-row">
+					<div className="ms-Grid-col ms-sm12 ms-lg2 ms-lgOffset10">
+						<ActionButton iconProps={{ iconName: 'Add' }} onClick={() => this._addNewSiteDesign()}>
+							New
+						</ActionButton>
+					</div>
+				</div>
 				<div className="ms-Grid-row">
 					{siteDesigns.map((sd) => (
 						<div className="ms-Grid-col ms-sm12 ms-xl6">
@@ -135,15 +145,19 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 		let { siteDesignEdition } = this.state;
 
 		const onObjectChanged = (o) => {
-      console.log('Site Design Object has changed.');
-      this.setState({
-        siteDesignEdition: assign({}, siteDesignEdition, o)
-      });
-
+			console.log('Site Design Object has changed.');
+			this.setState({
+				siteDesignEdition: assign({}, siteDesignEdition, o)
+			});
 		};
 
 		return (
-			<Panel isOpen={true} type={PanelType.medium} headerText="Edit Site Design" onDismiss={() => this._cancelSiteDesignEdition()}>
+			<Panel
+				isOpen={true}
+				type={PanelType.medium}
+				headerText="Edit Site Design"
+				onDismiss={() => this._cancelSiteDesignEdition()}
+			>
 				<div className="ms-Grid-row">
 					<div className="ms-Grid-col ms-sm12">
 						<SiteDesignEditor
@@ -159,6 +173,23 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 				</DialogFooter>
 			</Panel>
 		);
+	}
+
+	private _addNewSiteDesign() {
+		this.setState({
+			isEditing: true,
+			siteDesignEdition: {
+				Id: '',
+				Title: 'New Site Design',
+				WebTemplate: WebTemplate.TeamSite.toString(),
+				SiteScriptIds: [],
+				Description: '',
+				PreviewImageUrl: '',
+				PreviewImageAltText: '',
+				IsDefault: false,
+				Version: 1
+			}
+		});
 	}
 
 	private _editSiteDesign(siteDesign: ISiteDesign) {
