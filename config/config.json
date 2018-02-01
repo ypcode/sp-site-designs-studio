@@ -1,0 +1,18 @@
+{
+  "$schema": "https://dev.office.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "site-designs-studio-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/siteDesignsStudio/SiteDesignsStudioWebPart.js",
+          "manifest": "./src/webparts/siteDesignsStudio/SiteDesignsStudioWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "SiteDesignsStudioWebPartStrings": "lib/webparts/siteDesignsStudio/loc/{locale}.js"
+  }
+}

@@ -1,0 +1,35 @@
+@import '~@microsoft/sp-office-ui-fabric-core/dist/sass/SPFabricCore.scss';
+
+.siteDesignEditor {
+	.imagePreview {
+		width: 90%;
+		margin: auto;
+		margin-top: 5px;
+		margin-bottom: 5px;
+    border: 1px solid $ms-color-themeDark;
+    padding: 3px;
+
+    .imagePreviewButton {
+      margin-top: 2px;
+    }
+  }
+
+  .addScriptButton {
+    margin-top: 25px;
+  }
+
+	.siteScripts {
+    margin-top: 5px;
+		max-height: 60vh;
+		overflow-y: auto;
+		overflow-x: hidden;
+
+		.siteScript {
+			border: 1px solid $ms-color-themeDark;
+			width: 98%;
+      margin: auto;
+      margin-bottom: 2px;
+      padding: 3px;
+		}
+	}
+}

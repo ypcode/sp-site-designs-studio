@@ -1,0 +1,12 @@
+{
+  "$schema": "https://dev.office.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "site-designs-studio-client-side-solution",
+    "id": "9697138b-f2b1-4836-993c-9f729fc4158d",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true
+  },
+  "paths": {
+    "zippedPackage": "solution/site-designs-studio.sppkg"
+  }
+}
