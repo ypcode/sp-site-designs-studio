@@ -73,7 +73,7 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 		return (
 			<div className={styles.siteDesignsManager}>
 				{userMessage ? (
-					<MessageBar messageBarType={hasError ? MessageBarType.error : MessageBarType.success} />
+					<MessageBar messageBarType={hasError ? MessageBarType.error : MessageBarType.success} >{userMessage}</MessageBar>
 				) : null}
 				{isEditing ? this._renderSiteDesignEditor() : null}
 				<div className="ms-Grid-row">
@@ -143,7 +143,7 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 		};
 
 		return (
-			<Panel isOpen={true} type={PanelType.largeFixed} headerText="Edit Site Design" onDismiss={() => this._cancelSiteDesignEdition()}>
+			<Panel isOpen={true} type={PanelType.medium} headerText="Edit Site Design" onDismiss={() => this._cancelSiteDesignEdition()}>
 				<div className="ms-Grid-row">
 					<div className="ms-Grid-col ms-sm12">
 						<SiteDesignEditor

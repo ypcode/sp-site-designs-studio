@@ -6,7 +6,6 @@ import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from '../ISit
 import { escape, assign } from '@microsoft/sp-lodash-subset';
 
 import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
-import SiteScriptEditor from '../siteScriptContentEditor/SiteScriptContentEditor';
 import { ISiteScriptContent, ISiteScriptAction } from '../../models/ISiteScript';
 import {
 	ISiteScriptSchemaService,
@@ -76,24 +75,31 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 	public render(): React.ReactElement<ISiteDesignsStudioProps> {
 		return (
 			<div className={styles.scriptActionAdder}>
-				<div className={styles.actionAddIcon} onClick={() => this._addNewAction()}>
+				<div
+					className={styles.actionAddIcon + ' ' + (this.props.parentAction ? styles.subactions : '')}
+					onClick={() => this._addNewAction()}
+				>
 					<Icon iconName="CircleAdditionSolid" />
 				</div>
 				<Panel
-					type={PanelType.large}
+					type={PanelType.smallFixedFar}
 					isOpen={this.state.isAdding}
 					headerText="Add a Script Action"
 					onDismiss={() => this._onPanelDismiss()}
 				>
 					<div className="ms-Grid-row">
 						{this.state.availableActions.map((a, index) => (
-							<div key={index} className="ms-Grid-col ms-sm12 ms-lg6">
+							<div key={index} className="ms-Grid-col ms-sm12">
 								<div className={styles.actionButtonContainer}>
 									<div className={styles.actionButton} onClick={() => this._onActionAdded(a)}>
-										<div className={styles.actionIcon}>
-											<Icon iconName="SetAction" />
+										<div className="ms-Grid-col ms-sm4">
+											<div className={styles.actionIcon}>
+												<Icon iconName="SetAction" />
+											</div>
 										</div>
-										<div className={styles.actionButtonLabel}>{this._translateLabel(a)}</div>
+										<div className="ms-Grid-col ms-sm8">
+											<div className={styles.actionButtonLabel}>{this._translateLabel(a)}</div>
+										</div>
 									</div>
 								</div>
 							</div>

@@ -22,9 +22,14 @@ export interface IScriptActionEditorProps extends IServiceConsumerComponentProps
 	action: ISiteScriptAction;
 	schema: any;
 	isExpanded: boolean;
+	allSubactionsExpanded: boolean;
 	onExpandToggle?: (isExpanded: boolean) => void;
-	onActionChanged: (action: ISiteScriptAction) => void;
-	onRemove: () => void;
+	onActionChanged?: (action: ISiteScriptAction) => void;
+	onRemove?: () => void;
+	canMoveUp?: boolean;
+	onMoveUp?: () => void;
+	canMoveDown?: boolean;
+	onMoveDown?: () => void;
 	getActionName: (action: ISiteScriptAction) => string;
 }
 
@@ -45,9 +50,9 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		};
 	}
 
-	// public componentWillReceiveProps(nextProps: IScriptActionEditorProps) {
-	// 	this._setAllSubactionsExpanded(nextProps.isExpanded);
-	// }
+	public componentWillReceiveProps(nextProps: IScriptActionEditorProps) {
+		this._setAllSubactionsExpanded(nextProps.allSubactionsExpanded);
+	}
 
 	private _toggleIsExpanded() {
 		if (this.props.onExpandToggle) {
@@ -95,7 +100,16 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 	}
 
 	public render(): React.ReactElement<IScriptActionEditorProps> {
-		let { isExpanded, action, serviceScope, schema, onActionChanged } = this.props;
+		let {
+			isExpanded,
+			action,
+			serviceScope,
+			schema,
+			onActionChanged,
+			allSubactionsExpanded,
+			canMoveDown,
+			canMoveUp
+		} = this.props;
 		let expandCollapseIcon = isExpanded ? 'CollapseContentSingle' : 'ExploreContentSingle';
 
 		const subactionsRenderer = (subactions: ISiteScriptAction[]) => (
@@ -108,12 +122,17 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 								key={`SUBACTION_${index}`}
 								serviceScope={this.props.serviceScope}
 								isExpanded={this._isSubactionExpanded(index)}
+								allSubactionsExpanded={allSubactionsExpanded}
 								onExpandToggle={(expanded) => this._setSubActionExpanded(index, expanded)}
 								action={subaction}
 								getActionName={(s) => s.verb}
 								schema={this.siteScriptSchemaService.getSubActionSchema(action, subaction)}
 								onRemove={() => this._removeScriptSubAction(action, index)}
 								onActionChanged={(a) => this._onSubActionUpdated(action, index, a)}
+								canMoveDown={index < subactions.length - 1}
+								onMoveDown={() => this._moveSubactionDown(action, index)}
+								canMoveUp={index > 0}
+								onMoveUp={() => this._moveSubactionUp(action, index)}
 							/>
 						</div>
 					))}
@@ -131,17 +150,34 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		return (
 			<div className={styles.scriptActionEditor}>
 				<div className="ms-Grid-row">
-					<div className="ms-Grid-col ms-sm10">
+					<div className="ms-Grid-col ms-sm8">
 						<h2 className={styles.title}>
 							{this._translateLabel(this.props.getActionName(this.props.action))}
 						</h2>
 					</div>
-					<div className="ms-Grid-col ms-sm2 close">
-						<IconButton
-							iconProps={{ iconName: expandCollapseIcon }}
-							onClick={() => this._toggleIsExpanded()}
-						/>
-						<IconButton iconProps={{ iconName: 'ChromeClose' }} onClick={() => this.props.onRemove()} />
+					<div className="ms-Grid-col ms-sm4">
+						<div className={styles.commandButtonsContainer}>
+							<div className={styles.commandButtons}>
+								<IconButton
+									iconProps={{ iconName: 'Up' }}
+									onClick={() => this._onMoveUp()}
+									disabled={!canMoveUp}
+								/>
+								<IconButton
+									iconProps={{ iconName: 'Down' }}
+									onClick={() => this._onMoveDown()}
+									disabled={!canMoveDown}
+								/>
+								<IconButton
+									iconProps={{ iconName: expandCollapseIcon }}
+									onClick={() => this._toggleIsExpanded()}
+								/>
+								<IconButton
+									iconProps={{ iconName: 'ChromeClose' }}
+									onClick={() => this.props.onRemove()}
+								/>
+							</div>
+						</div>
 					</div>
 				</div>
 				{isExpanded && (
@@ -160,6 +196,42 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 				)}
 			</div>
 		);
+	}
+
+	private _onMoveUp() {
+		if (this.props.onMoveUp) {
+			this.props.onMoveUp();
+		}
+	}
+
+	private _onMoveDown() {
+		if (this.props.onMoveDown) {
+			this.props.onMoveDown();
+		}
+	}
+
+	private _moveSubactionUp(parentAction: ISiteScriptAction, index: number) {
+		this._swapSubActions(parentAction, index, index - 1);
+	}
+
+	private _moveSubactionDown(parentAction: ISiteScriptAction, index: number) {
+		this._swapSubActions(parentAction, index, index + 1);
+	}
+
+	private _swapSubActions(parentAction: ISiteScriptAction, oldIndex: number, newIndex: number) {
+		if (newIndex < 0 || newIndex > parentAction.subactions.length - 1) {
+			return;
+		}
+
+		let newSubActions = [].concat(parentAction.subactions);
+
+		let old = newSubActions[oldIndex];
+		newSubActions[oldIndex] = newSubActions[newIndex];
+		newSubActions[newIndex] = old;
+
+		let updatedAction = assign({}, parentAction);
+		updatedAction.subactions = newSubActions;
+		this.props.onActionChanged(updatedAction);
 	}
 
 	private _addScriptSubAction(parentAction: ISiteScriptAction, verb: string) {

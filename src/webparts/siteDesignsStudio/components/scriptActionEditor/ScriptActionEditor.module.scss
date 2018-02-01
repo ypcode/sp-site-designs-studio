@@ -9,13 +9,21 @@
 	margin: 5px;
 
 	.title {
-		color: darkblue;
+    color: darkblue;
+    padding-top: 2px;
+		margin-top: 0;
 		margin-bottom: 0;
 	}
 
-	.close {
-		text-align: right;
-	}
+  .commandButtonsContainer {
+    position: relative;
+
+    .commandButtons {
+      position: absolute;
+      right: 1px;
+    }
+  }
+
 
 	.subactions {
 		.scriptActionAdder {

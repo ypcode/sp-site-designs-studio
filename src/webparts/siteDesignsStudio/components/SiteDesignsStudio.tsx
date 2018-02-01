@@ -13,7 +13,7 @@ import styles from './SiteDesignsStudio.module.scss';
 import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from './ISiteDesignsStudioProps';
 import { escape, assign } from '@microsoft/sp-lodash-subset';
 
-import SiteScriptEditor from './siteScriptContentEditor/SiteScriptContentEditor';
+import SiteScriptEditor from './siteScriptEditor/SiteScriptEditor';
 import { ISiteScriptContent, ISiteScript } from '../models/ISiteScript';
 import SiteDesignsManager from './siteDesignsManager/SiteDesignsManager';
 import SiteScriptsManager from './siteScriptsManager/SiteScriptsManager';

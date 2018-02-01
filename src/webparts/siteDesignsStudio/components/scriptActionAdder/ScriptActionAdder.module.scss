@@ -12,15 +12,11 @@
 		display: block;
 		margin: auto;
 		font-size: 40px;
-	}
-}
+  }
 
-.subactions {
-	.scriptActionAdder {
-		.actionAddIcon {
-			font-size: 20px;
-		}
-	}
+  .actionAddIcon.subactions {
+		font-size: 30px;
+  }
 }
 
 .actionButtonContainer {
@@ -31,20 +27,22 @@
 		padding: 3px;
 		margin: 2px;
 		display: block;
-		text-align: center;
 		width: 100%;
-		min-height: 100px;
+		min-height: 50px;
 		cursor: pointer;
 
 		.actionIcon {
-			display: block;
-			margin: auto;
-			font-size: 72px;
+			display: inline-block;
+      margin: auto;
+      margin-top: 10px;
+			font-size: 32px;
 		}
 
 		.actionButtonLabel {
-			font-size: 24px;
-			display: block;
+      display: inline-block;
+      vertical-align: top;
+      font-size: 20px;
+      margin-top: 3px;
 		}
   }
 

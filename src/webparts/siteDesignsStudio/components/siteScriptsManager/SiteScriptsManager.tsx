@@ -14,7 +14,8 @@ import {
 	MessageBar,
 	MessageBarType,
 	IconButton,
-	ActionButton
+	ActionButton,
+  DialogFooter
 } from 'office-ui-fabric-react';
 import styles from '../SiteDesignsStudio.module.scss';
 import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
@@ -29,8 +30,6 @@ export interface ISiteScriptsManagerProps extends IServiceConsumerComponentProps
 }
 export interface ISiteScriptsManagerState {
 	siteScripts: ISiteScript[];
-	isEditing: boolean;
-	currentScriptEdition: ISiteScript;
 	isLoading: boolean;
 	hasError: boolean;
 	userMessage: string;
@@ -48,8 +47,6 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 
 		this.state = {
 			siteScripts: [],
-			isEditing: false,
-			currentScriptEdition: null,
 			isLoading: false,
 			hasError: false,
 			userMessage: null
@@ -83,10 +80,9 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 	}
 
 	public render(): React.ReactElement<ISiteDesignsStudioProps> {
-		let { siteScripts, isEditing, currentScriptEdition, hasError, userMessage } = this.state;
+		let { siteScripts, hasError, userMessage } = this.state;
 		return (
 			<div className={styles.siteDesignsManager}>
-				{isEditing && this._renderSiteScriptPropertiesEditor(currentScriptEdition)}
 				{userMessage && (
 					<div className="ms-Grid-row">
 						<div className="ms-Grid-col ms-sm12">
@@ -119,24 +115,12 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 	}
 
 	private _addNewSiteScript() {
-		this._editSiteScript({
+		this.props.onScriptContentEdit({
 			Id: '',
 			Title: 'New Site Script',
-			Content: {
-				actions: [],
-				bindata: {},
-				version: 1
-			},
+			Content: null,
 			Description: '',
 			Version: 1
-		});
-	}
-
-	private _editSiteScript(siteScript: ISiteScript) {
-		console.log('Site script edited= ', siteScript);
-		this.setState({
-			isEditing: true,
-			currentScriptEdition: siteScript
 		});
 	}
 
@@ -153,47 +137,12 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 		}
 	}
 
-	private _renderSiteScriptPropertiesEditor(siteScript: ISiteScript) {
-		let editingSiteScript = assign({}, siteScript);
-
-		const onObjectChanged = (o) => {
-			assign(editingSiteScript, o);
-		};
-
-		return (
-			<Panel isOpen={true} type={PanelType.smallFixedFar} onDismiss={() => this._cancelScriptEdition()}>
-				<div className="ms-Grid-row">
-					<div className="ms-Grid-col ms-sm12">
-						<GenericObjectEditor
-							readOnlyProperties={[ 'Id' ]}
-							object={editingSiteScript}
-							onObjectChanged={onObjectChanged.bind(this)}
-							schema={SiteScriptEntitySchema}
-						/>
-					</div>
-				</div>
-				<div className="ms-Grid-row">
-					<div className="ms-Grid-col ms-sm6 ms-lg4 ms-lgOffset4">
-						<PrimaryButton text="Save" onClick={() => this._saveScript(editingSiteScript)} />
-					</div>
-					<div className="ms-Grid-col ms-sm6 ms-lg4">
-						<DefaultButton text="Cancel" onClick={() => this._cancelScriptEdition()} />
-					</div>
-				</div>
-			</Panel>
-		);
-	}
-
 	private _renderSiteScriptItem(siteScript: ISiteScript) {
 		return (
 			<div className={styles.siteScriptItem}>
 				<div className="ms-Grid-row">
-					<div className="ms-Grid-col ms-sm12 ms-lg8">
+					<div className="ms-Grid-col ms-sm12 ms-lg10">
 						<h2 className={styles.siteScriptItemTitle}>{siteScript.Title}</h2>
-					</div>
-					<div className="ms-Grid-col ms-sm3 ms-lg1" />
-					<div className="ms-Grid-col ms-sm3 ms-lg1">
-						<IconButton iconProps={{ iconName: 'Edit' }} onClick={() => this._editSiteScript(siteScript)} />
 					</div>
 					<div className="ms-Grid-col ms-sm3 ms-lg1">
 						<IconButton
@@ -220,33 +169,6 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 		);
 	}
 
-	private _saveScript(siteScript: ISiteScript) {
-		// If the site script is new (has no set Id)
-		if (!siteScript.Id) {
-      // Redirect to edit content
-			this.props.onScriptContentEdit(siteScript);
-		} else {
-			this.setState({ isLoading: true });
-			this.siteDesignsService
-				.saveSiteScript(siteScript)
-				.then((_) => {
-					this.setState({
-						isEditing: false,
-						currentScriptEdition: null,
-						userMessage: 'The site script has been properly saved'
-					});
-				})
-				.then(() => this._loadSiteScripts(true))
-				.catch((error) => {
-					this.setState({
-						isEditing: false,
-						currentScriptEdition: null,
-						hasError: true,
-						userMessage: 'The site script cannot be properly saved'
-					});
-				});
-		}
-	}
 
 	private _deleteScript(siteScript: ISiteScript) {
 		this.setState({ isLoading: true });
@@ -254,26 +176,15 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 			.deleteSiteScript(siteScript)
 			.then((_) => {
 				this.setState({
-					isEditing: false,
-					currentScriptEdition: null,
 					userMessage: 'The site script has been properly deleted'
 				});
 			})
 			.then(() => this._loadSiteScripts(true))
 			.catch((error) => {
 				this.setState({
-					isEditing: false,
-					currentScriptEdition: null,
 					hasError: true,
 					userMessage: 'The site script cannot be deleted'
 				});
 			});
-	}
-
-	private _cancelScriptEdition() {
-		this.setState({
-			isEditing: false,
-			currentScriptEdition: null
-		});
 	}
 }
