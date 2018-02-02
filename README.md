@@ -1,21 +1,27 @@
 ## site-designs-studio
 
-This is where you include your WebPart documentation.
+This SPFx WebPart is currently in Beta version
+Please try it out and give some feedback.
+
+The WebPart has only be tested in both local and hosted Workbenchs, not in real Modern Pages.
+
+Upcoming features I plan to deliver
+- Ordering of associated Site Scripts in Site Designs
+- Check and proper handling of current user access rights
+- Improve user messages and use localized strings
+- Some UI fine-tuning
+
+Please submit any suggestions or report bugs in the issues
 
 ### Building the code
 
 ```bash
-git clone the repo
+git clone https://github.com/ypcode/sp-site-designs-studio.git
 npm i
 npm i -g gulp
 gulp
 ```
 
-This package produces the following:
-
-* lib/* - intermediate-stage commonjs build artifacts
-* dist/* - the bundled script, along with other resources
-* deploy/* - all resources which should be uploaded to a CDN.
 
 ### Build options
 
