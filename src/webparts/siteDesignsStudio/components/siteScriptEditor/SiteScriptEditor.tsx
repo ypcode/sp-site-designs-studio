@@ -342,7 +342,6 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 										allSubactionsExpanded={allSubactionsExpanded}
 										serviceScope={this.props.serviceScope}
 										action={action}
-										getActionName={(s) => s.verb}
 										schema={this.siteScriptSchemaService.getActionSchema(action)}
 										onRemove={() => this._removeScriptAction(index)}
 										onActionChanged={(a) => this._onActionUpdated(index, a)}
@@ -394,7 +393,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	// 			scriptContentDirtyJson: json
 	// 		});
 	// 	}
-	// }
+  // }
 
 	private _moveActionUp(index: number) {
 		this._swapActions(index, index - 1);

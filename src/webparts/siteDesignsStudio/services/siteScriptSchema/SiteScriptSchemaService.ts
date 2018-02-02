@@ -151,11 +151,32 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 	}
 
 	public getActionSchema(action: ISiteScriptAction): any {
-		return this.availableActionSchemas[action.verb];
+    let directResolvedSchema = this.availableActionSchemas[action.verb];
+    if (directResolvedSchema) {
+      return directResolvedSchema;
+    }
+
+    // Try to find the schema by case insensitive key
+    let availableActionKeys = Object.keys(this.availableActionSchemas);
+    let foundKeys = availableActionKeys.filter(k => k.toUpperCase() == action.verb.toUpperCase());
+    let actionSchemaKey = foundKeys.length == 1 ? foundKeys[0] : null;
+    return this.availableActionSchemas[actionSchemaKey];
 	}
 
 	public getSubActionSchema(parentAction: ISiteScriptAction, subAction: ISiteScriptAction): any {
-		return this.availableSubActionSchemasByVerb[parentAction.verb][subAction.verb];
+    // return this.availableSubActionSchemasByVerb[parentAction.verb][subAction.verb];
+
+    let availableSubActionSchemas = this.availableSubActionSchemasByVerb[parentAction.verb];
+    let directResolvedSchema = availableSubActionSchemas[subAction.verb];
+    if (directResolvedSchema) {
+      return directResolvedSchema;
+    }
+
+    // Try to find the schema by case insensitive key
+    let availableSubActionKeys = Object.keys(availableSubActionSchemas);
+    let foundKeys = availableSubActionKeys.filter(k => k.toUpperCase() == subAction.verb.toUpperCase());
+    let subActionSchemaKey = foundKeys.length == 1 ? foundKeys[0] : null;
+    return availableSubActionSchemas[subActionSchemaKey];
 	}
 
 	public getAvailableActionsAsync(): Promise<string[]> {

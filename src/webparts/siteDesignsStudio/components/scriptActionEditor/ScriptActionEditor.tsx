@@ -30,7 +30,7 @@ export interface IScriptActionEditorProps extends IServiceConsumerComponentProps
 	onMoveUp?: () => void;
 	canMoveDown?: boolean;
 	onMoveDown?: () => void;
-	getActionName: (action: ISiteScriptAction) => string;
+	getActionName?: (action: ISiteScriptAction) => string;
 }
 
 export default class ScriptActionEditor extends React.Component<IScriptActionEditorProps, IScriptActionEditorState> {
@@ -57,6 +57,29 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 	private _toggleIsExpanded() {
 		if (this.props.onExpandToggle) {
 			this.props.onExpandToggle(!this.props.isExpanded);
+		}
+	}
+
+	// TODO Reuse the current private method from schema service
+	private _getVerbFromActionSchema(actionDefinition: any): string {
+		if (
+			!actionDefinition.properties ||
+			!actionDefinition.properties.verb ||
+			!actionDefinition.properties.verb.enum ||
+			!actionDefinition.properties.verb.enum.length
+		) {
+			throw new Error('Invalid Action schema');
+		}
+
+		return actionDefinition.properties.verb.enum[0];
+	}
+
+	private _getCurrentActionName(): string {
+		let { schema, action, getActionName } = this.props;
+		if (getActionName) {
+			return getActionName(action);
+		} else {
+			return this._getVerbFromActionSchema(schema);
 		}
 	}
 
@@ -125,7 +148,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 								allSubactionsExpanded={allSubactionsExpanded}
 								onExpandToggle={(expanded) => this._setSubActionExpanded(index, expanded)}
 								action={subaction}
-								getActionName={(s) => s.verb}
+								getActionName={this.props.getActionName}
 								schema={this.siteScriptSchemaService.getSubActionSchema(action, subaction)}
 								onRemove={() => this._removeScriptSubAction(action, index)}
 								onActionChanged={(a) => this._onSubActionUpdated(action, index, a)}
@@ -152,7 +175,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 				<div className="ms-Grid-row">
 					<div className="ms-Grid-col ms-sm8">
 						<h2 className={styles.title}>
-							{this._translateLabel(this.props.getActionName(this.props.action))}
+							{this._translateLabel(this._getCurrentActionName())}
 						</h2>
 					</div>
 					<div className="ms-Grid-col ms-sm4">
