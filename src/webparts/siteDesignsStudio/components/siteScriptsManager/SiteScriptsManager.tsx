@@ -176,14 +176,15 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 			.deleteSiteScript(siteScript)
 			.then((_) => {
 				this.setState({
-					userMessage: 'The site script has been properly deleted'
+          userMessage: 'The site script has been properly deleted',
+          hasError: false
 				});
 			})
 			.then(() => this._loadSiteScripts(true))
 			.catch((error) => {
 				this.setState({
 					hasError: true,
-					userMessage: 'The site script cannot be deleted'
+          userMessage: 'The site script cannot be deleted'
 				});
 			});
 	}

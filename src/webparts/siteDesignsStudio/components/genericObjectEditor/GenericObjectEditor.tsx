@@ -12,22 +12,22 @@ export interface ISchemaProperty {
 
 export interface IGenericObjectEditorProps {
 	schema: any;
-  object: any;
-  defaultValues?: any;
-  customRenderers?: any;
+	object: any;
+	defaultValues?: any;
+	customRenderers?: any;
 	ignoredProperties?: string[];
 	readOnlyProperties?: string[];
 	onObjectChanged?: (object: any) => void;
 }
 
 export default class GenericObjectEditor extends React.Component<IGenericObjectEditorProps, {}> {
-  private objectProperties: string[];
-  private customPropertyRenderers = {};
+	private objectProperties: string[];
+	private customPropertyRenderers = {};
 
 	constructor(props: IGenericObjectEditorProps) {
 		super(props);
-    this._refreshObjectProperties(props);
-    // this._initializeCustomPropertyRenderers();
+		this._refreshObjectProperties(props);
+		// this._initializeCustomPropertyRenderers();
 	}
 
 	public componentWillReceiveProps(nextProps: IGenericObjectEditorProps) {
@@ -45,29 +45,64 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 		}
 
 		this.objectProperties = Object.keys(schema.properties);
+
 		if (ignoredProperties && ignoredProperties.length > 0) {
 			this.objectProperties = this.objectProperties.filter((p) => ignoredProperties.indexOf(p) < 0);
 		}
 
 		// Initialize properties of the argument object is not set
 		this.objectProperties.forEach((p) => {
-      let defaultValue = defaultValues && defaultValues[p] ? defaultValues[p] : '';
+			// Get the property type
+
+			let defaultValue =
+				defaultValues && defaultValues[p]
+					? defaultValues[p]
+					: this._getPropertyDefaultValueFromSchema(props, p);
 
 			if (!object[p] && object[p] != false && object[p] != 0) {
 				object[p] = defaultValue;
 			}
 		});
-  }
+	}
 
-  // private _initializeCustomPropertyRenderers() {
-  //   React.Children.forEach(this.props.children, (child, index) => {
-  //     let castedChild = (child as React.ReactElement<any>);
-  //     if (React.isValidElement(child) && castedChild.type === GenericObjectPropertyRenderer) {
-  //       let propertyName = castedChild.props["propertyName"];
-  //       this.customPropertyRenderers[propertyName] = castedChild;
-  //     }
-  //   });
-  // }
+	private _getPropertyDefaultValueFromSchema(props: IGenericObjectEditorProps, propertyName: string): any {
+		let { schema, ignoredProperties } = props;
+		let propSchema = schema.properties[propertyName];
+		if (propSchema) {
+			switch (propSchema.type) {
+				case 'string':
+					return '';
+				case 'boolean':
+					return false;
+				case 'number':
+					return 0;
+				default:
+					return null;
+			}
+		} else {
+			return null;
+		}
+	}
+
+	private _getPropertyTypeFromSchema(props: IGenericObjectEditorProps, propertyName: string): any {
+		let { schema, ignoredProperties } = props;
+		let propSchema = schema.properties[propertyName];
+		if (propSchema) {
+			return propSchema.type;
+		} else {
+			return null;
+		}
+	}
+
+	// private _initializeCustomPropertyRenderers() {
+	//   React.Children.forEach(this.props.children, (child, index) => {
+	//     let castedChild = (child as React.ReactElement<any>);
+	//     if (React.isValidElement(child) && castedChild.type === GenericObjectPropertyRenderer) {
+	//       let propertyName = castedChild.props["propertyName"];
+	//       this.customPropertyRenderers[propertyName] = castedChild;
+	//     }
+	//   });
+	// }
 
 	public render(): React.ReactElement<IGenericObjectEditorProps> {
 		let { schema, ignoredProperties } = this.props;
@@ -84,11 +119,17 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 	}
 
 	private _onObjectPropertyChange(propertyName: string, newValue: any) {
-    let { object, onObjectChanged } = this.props;
-    if (!onObjectChanged) {
-      return;
-    }
+		let { object, onObjectChanged } = this.props;
+		if (!onObjectChanged) {
+			return;
+		}
 		let newObject = assign({}, object);
+
+		let propertyType = this._getPropertyTypeFromSchema(this.props, propertyName);
+		if (propertyType == 'number') {
+			newValue = Number(newValue);
+		}
+
 		newObject[propertyName] = newValue;
 		onObjectChanged(newObject);
 	}
@@ -99,12 +140,12 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 	}
 
 	private _renderPropertyEditor(propertyName: string, property: ISchemaProperty) {
-    let { schema, object, customRenderers } = this.props;
+		let { schema, object, customRenderers } = this.props;
 
-    // Has custom renderer for the property
-    if (customRenderers && customRenderers[propertyName]) {
-      return customRenderers[propertyName](object[propertyName]);
-    }
+		// Has custom renderer for the property
+		if (customRenderers && customRenderers[propertyName]) {
+			return customRenderers[propertyName](object[propertyName]);
+		}
 
 		let isPropertyRequired =
 			(schema.required && schema.required.length && schema.required.indexOf(propertyName) > -1) || false;
@@ -114,7 +155,7 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 				return (
 					<Dropdown
 						label={this._translateLabel(propertyName)}
-            selectedKey={object[propertyName]}
+						selectedKey={object[propertyName]}
 						options={property.enum.map((p) => ({ key: p, text: p }))}
 						onChanged={(value) => this._onObjectPropertyChange(propertyName, value.key)}
 					/>
@@ -135,8 +176,8 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 					return (
 						<Toggle
 							label={this._translateLabel(propertyName)}
-              checked={object[propertyName] as boolean}
-              disabled={this._isPropertyReadOnly(propertyName)}
+							checked={object[propertyName] as boolean}
+							disabled={this._isPropertyReadOnly(propertyName)}
 							onChanged={(value) => this._onObjectPropertyChange(propertyName, value)}
 						/>
 					);
@@ -146,8 +187,8 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 					return (
 						<TextField
 							label={this._translateLabel(propertyName)}
-              value={object[propertyName]}
-              readOnly={this._isPropertyReadOnly(propertyName)}
+							value={object[propertyName]}
+							readOnly={this._isPropertyReadOnly(propertyName)}
 							onChanged={(value) => this._onObjectPropertyChange(propertyName, value)}
 						/>
 					);
