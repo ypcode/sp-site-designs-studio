@@ -12,6 +12,12 @@
     .imagePreviewButton {
       margin-top: 2px;
     }
+
+    .imagePreviewUpdateLink {
+      font-size: larger;
+      padding-top: 20px;
+      padding-bottom: 20px;
+    }
   }
 
   .addScriptButton {
@@ -26,10 +32,17 @@
 
 		.siteScript {
 			border: 1px solid $ms-color-themeDark;
-			width: 98%;
-      margin: auto;
-      margin-bottom: 2px;
-      padding: 3px;
-		}
+			width: 90%;
+      margin: 0;
+      margin-bottom: 5px;
+      margin-left: auto;
+      padding: 10px;
+      padding-top: 2px;
+      padding-bottom: 1px;
+    }
+
+    .siteScript:hover {
+      box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    }
 	}
 }

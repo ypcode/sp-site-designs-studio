@@ -11,7 +11,9 @@ import {
 	ImageFit,
 	PrimaryButton,
 	IDropdownOption,
-  ActionButton
+	ActionButton,
+	Spinner,
+	SpinnerSize
 } from 'office-ui-fabric-react';
 import styles from './SiteDesignEditor.module.scss';
 import { escape, assign } from '@microsoft/sp-lodash-subset';
@@ -32,6 +34,7 @@ export interface ISiteDesignEditorState {
 	isEditingPreview: boolean;
 	availableSiteScripts: ISiteScript[];
 	scriptToAdd: string;
+	isLoading: boolean;
 }
 
 export interface ISiteDesignEditorProps extends IServiceConsumerComponentProps {
@@ -52,7 +55,8 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 		this.state = {
 			isEditingPreview: false,
 			availableSiteScripts: [],
-			scriptToAdd: ''
+			scriptToAdd: '',
+			isLoading: true
 		};
 	}
 
@@ -67,7 +71,8 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 	private _loadAvailableSiteScripts() {
 		this.siteDesignsService.getSiteScripts().then((scripts) => {
 			this.setState({
-				availableSiteScripts: scripts
+				availableSiteScripts: scripts,
+				isLoading: false
 			});
 		});
 	}
@@ -79,7 +84,7 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 
 	public render(): React.ReactElement<ISiteDesignEditorProps> {
 		let { siteDesign } = this.props;
-		let { isEditingPreview } = this.state;
+		let { isEditingPreview, isLoading } = this.state;
 
 		let previewProps: IDocumentCardPreviewProps = {
 			previewImages: [
@@ -88,11 +93,21 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 					url: siteDesign.PreviewImageUrl,
 					previewImageSrc: siteDesign.PreviewImageUrl,
 					imageFit: ImageFit.cover,
-					width: 200,
-					height: 200
+					width: 280,
+					height: 173
 				}
 			]
 		};
+
+		if (isLoading) {
+			return (
+				<div className="ms-Grid-row">
+					<div className="ms-Grid-col ms-sm6 ms-smOffset3">
+						<Spinner size={SpinnerSize.large} label="Loading..." />
+					</div>
+				</div>
+			);
+		}
 
 		return (
 			<div className={styles.siteDesignEditor}>
@@ -122,7 +137,7 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 											</div>
 										</div>
 										<div className="ms-Grid-row">
-											<div className="ms-Grid-col ms-smPush8 ms-sm4">
+											<div className="ms-Grid-col ms-smPush6 ms-sm4">
 												<div className={styles.imagePreviewButton}>
 													<PrimaryButton
 														text="Ok"
@@ -133,17 +148,25 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 										</div>
 									</div>
 								) : (
-									<DocumentCard onClick={() => this._toggleImagePreviewEdition()}>
-										<DocumentCardPreview {...previewProps} />
-									</DocumentCard>
+									<div onClick={() => this._toggleImagePreviewEdition()}>
+										{siteDesign.PreviewImageUrl ? (
+											<DocumentCard>
+												<DocumentCardPreview {...previewProps} />
+											</DocumentCard>
+										) : (
+											<div className={styles.imagePreview + " " + styles.imagePreviewUpdateLink}>Click here to modify preview</div>
+										)}
+									</div>
 								)}
 							</div>
 						</div>
-						<div className="ms-Grid-row">
-							<div className="ms-Grid-col ms-sm12">
-								<TextField readOnly={true} disabled={true} label="Id" value={siteDesign.Id} />
+						{siteDesign.Id && (
+							<div className="ms-Grid-row">
+								<div className="ms-Grid-col ms-sm12">
+									<TextField readOnly={true} disabled={true} label="Id" value={siteDesign.Id} />
+								</div>
 							</div>
-						</div>
+						)}
 						<div className="ms-Grid-row">
 							<div className="ms-Grid-col ms-sm12">
 								<TextField
@@ -199,11 +222,13 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 
 	private _renderSiteScripts() {
 		let { siteDesign } = this.props;
-    let { availableSiteScripts, scriptToAdd } = this.state;
+		let { availableSiteScripts, scriptToAdd } = this.state;
 
 		if (!availableSiteScripts || availableSiteScripts.length == 0) {
 			return <div>No available Site Scripts...</div>;
 		}
+
+		let availableScriptsToAdd = this._hasAvailableScriptsToAdd();
 
 		return (
 			<div>
@@ -213,23 +238,39 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 							options={this._getAvailableScriptsToAddDropdownOptions()}
 							onChanged={(v) => this._setScriptToAdd(v.key.toString())}
 							selectedKey={scriptToAdd || null}
+							disabled={!availableScriptsToAdd}
 							label="Available scripts"
 						/>
 					</div>
 					<div className="ms-Grid-col ms-sm2">
-          <div className={styles.addScriptButton}>
-						<ActionButton iconProps={{ iconName: 'Add' }} text="Add" onClick={() => this._addSiteScript(scriptToAdd)} />
+						<div className={styles.addScriptButton}>
+							<ActionButton
+								iconProps={{ iconName: 'Add' }}
+								text="Add"
+								disabled={!availableScriptsToAdd}
+								onClick={() => this._addSiteScript(scriptToAdd)}
+							/>
+						</div>
 					</div>
-          </div>
 				</div>
 
 				<div className={styles.siteScripts}>
 					{siteDesign.SiteScriptIds.map((scriptId) => this._getSiteScript(scriptId)).map(
-						(script: ISiteScript) =>
+						(script: ISiteScript, index: number) =>
 							script ? (
 								<div className={styles.siteScript}>
 									<h3>{script.Title}</h3>
 									<h4>{script.Description}</h4>
+									<IconButton
+										iconProps={{ iconName: 'Up' }}
+										onClick={() => this._moveSiteScriptUp(index)}
+										disabled={!this._canMoveSiteScriptUp(index)}
+									/>
+									<IconButton
+										iconProps={{ iconName: 'Down' }}
+										onClick={() => this._moveSiteScriptDOwn(index)}
+										disabled={!this._canMoveSiteScriptDown(index)}
+									/>
 									<IconButton
 										iconProps={{ iconName: 'Delete' }}
 										onClick={() => this._removeSiteScript(script.Id)}
@@ -263,6 +304,12 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 			.filter((s) => siteDesign.SiteScriptIds.indexOf(s.key) < 0);
 	}
 
+	private _hasAvailableScriptsToAdd(): boolean {
+		let { availableSiteScripts } = this.state;
+		let { siteDesign } = this.props;
+		return availableSiteScripts.filter((s) => siteDesign.SiteScriptIds.indexOf(s.Id) < 0).length > 0;
+	}
+
 	private _setScriptToAdd(scriptId: string) {
 		this.setState({
 			scriptToAdd: scriptId
@@ -285,6 +332,36 @@ export default class SiteDesignEditor extends React.Component<ISiteDesignEditorP
 		let currentScripts = this.props.siteDesign.SiteScriptIds;
 		let newScripts = currentScripts.filter((s) => s != scriptId);
 		this._onPropertyChanged('SiteScriptIds', newScripts);
+	}
+
+	private _swapSiteScript(oldIndex: number, newIndex: number) {
+		let { siteDesign } = this.props;
+		if (newIndex < 0 || newIndex > siteDesign.SiteScriptIds.length - 1) {
+			return;
+		}
+
+		let newSiteScriptIds = [].concat(siteDesign.SiteScriptIds);
+
+		let old = newSiteScriptIds[oldIndex];
+		newSiteScriptIds[oldIndex] = newSiteScriptIds[newIndex];
+		newSiteScriptIds[newIndex] = old;
+		this._onPropertyChanged('SiteScriptIds', newSiteScriptIds);
+	}
+
+	private _moveSiteScriptUp(index: number) {
+		this._swapSiteScript(index, index - 1);
+	}
+
+	private _canMoveSiteScriptUp(index: number): boolean {
+		return index > 0;
+	}
+
+	private _moveSiteScriptDOwn(index: number) {
+		this._swapSiteScript(index, index + 1);
+	}
+
+	private _canMoveSiteScriptDown(index: number): boolean {
+		return index < this.props.siteDesign.SiteScriptIds.length - 1;
 	}
 
 	private _toggleImagePreviewEdition() {

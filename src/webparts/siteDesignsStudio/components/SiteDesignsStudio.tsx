@@ -93,7 +93,8 @@ export default class SiteDesignsStudio extends React.Component<ISiteDesignsStudi
 				return (
 					<SiteScriptEditor
 						script={this.state.currentPageArgs as ISiteScript}
-						serviceScope={this.props.serviceScope}
+            serviceScope={this.props.serviceScope}
+            onScriptUpdated={script => this._onCurrentSiteScriptUpdated(script) }
 					/>
 				);
 			case ApplicationPage.Home:
@@ -102,25 +103,29 @@ export default class SiteDesignsStudio extends React.Component<ISiteDesignsStudi
 					<div>
 						<div className="ms-Grid-row">
 							<div className="ms-Grid-col ms-sm12 ms-lg6">
-								<div
-									className={styles.sectionButton}
-									onClick={() => this._goToPage(ApplicationPage.DesignsManagement)}
-								>
-									<div className={styles.sectionButtonIcon}>
-										<Icon iconName="Design" />
+								<div className="ms-slideRightIn40">
+									<div
+										className={styles.sectionButton}
+										onClick={() => this._goToPage(ApplicationPage.DesignsManagement)}
+									>
+										<div className={styles.sectionButtonIcon}>
+											<Icon iconName="Design" />
+										</div>
+										<div>Site Designs</div>
 									</div>
-									<div>Site Designs</div>
 								</div>
 							</div>
 							<div className="ms-Grid-col ms-sm12 ms-lg6">
-								<div
-									className={styles.sectionButton}
-									onClick={() => this._goToPage(ApplicationPage.ScriptsManagement)}
-								>
-									<div className={styles.sectionButtonIcon}>
-										<Icon iconName="Script" />
+								<div className="ms-slideLeftIn40">
+									<div
+										className={styles.sectionButton}
+										onClick={() => this._goToPage(ApplicationPage.ScriptsManagement)}
+									>
+										<div className={styles.sectionButtonIcon}>
+											<Icon iconName="Script" />
+										</div>
+										<div>Site Scripts</div>
 									</div>
-									<div>Site Scripts</div>
 								</div>
 							</div>
 						</div>
@@ -128,6 +133,12 @@ export default class SiteDesignsStudio extends React.Component<ISiteDesignsStudi
 				);
 		}
 	}
+
+private _onCurrentSiteScriptUpdated(script: ISiteScript) {
+  this.setState({
+    currentPageArgs: script
+  });
+}
 
 	private _goToPage(page: ApplicationPage, args: any = null) {
 		this.setState({

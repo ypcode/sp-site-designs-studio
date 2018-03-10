@@ -13,24 +13,19 @@ import {
 	SiteScriptSchemaServiceKey
 } from '../../services/siteScriptSchema/SiteScriptSchemaService';
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
+import ScriptActionCollectionEditor from './ScriptActionCollectionEditor';
 
 export interface IScriptActionEditorState {
-	expandedSubactionIndices: number[];
+
 }
 
 export interface IScriptActionEditorProps extends IServiceConsumerComponentProps {
 	action: ISiteScriptAction;
 	schema: any;
-	isExpanded: boolean;
-	allSubactionsExpanded: boolean;
-	onExpandToggle?: (isExpanded: boolean) => void;
+  allSubactionsExpanded: boolean;
+  expandedSubActions: number[];
+  onSubActionsExpandChanged?: (expanded: number[]) => void;
 	onActionChanged?: (action: ISiteScriptAction) => void;
-	onRemove?: () => void;
-	canMoveUp?: boolean;
-	onMoveUp?: () => void;
-	canMoveDown?: boolean;
-	onMoveDown?: () => void;
-	getActionName?: (action: ISiteScriptAction) => string;
 }
 
 export default class ScriptActionEditor extends React.Component<IScriptActionEditorProps, IScriptActionEditorState> {
@@ -46,18 +41,11 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		});
 
 		this.state = {
-			expandedSubactionIndices: []
 		};
 	}
 
 	public componentWillReceiveProps(nextProps: IScriptActionEditorProps) {
-		this._setAllSubactionsExpanded(nextProps.allSubactionsExpanded);
-	}
-
-	private _toggleIsExpanded() {
-		if (this.props.onExpandToggle) {
-			this.props.onExpandToggle(!this.props.isExpanded);
-		}
+		// this._setAllSubactionsExpanded(nextProps.allSubactionsExpanded);
 	}
 
 	// TODO Reuse the current private method from schema service
@@ -75,12 +63,8 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 	}
 
 	private _getCurrentActionName(): string {
-		let { schema, action, getActionName } = this.props;
-		if (getActionName) {
-			return getActionName(action);
-		} else {
-			return this._getVerbFromActionSchema(schema);
-		}
+		let { schema } = this.props;
+		return this._getVerbFromActionSchema(schema);
 	}
 
 	private _translateLabel(value: string): string {
@@ -88,77 +72,46 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		return strings[key] || value;
 	}
 
-	private _onSubActionChanged(parentAction: ISiteScriptAction, subAction: ISiteScriptAction) {
+	private _onSubActionAdded(parentAction: ISiteScriptAction, subAction: ISiteScriptAction) {
 		let subactions = parentAction['subactions'] as ISiteScriptAction[];
 		parentAction['subactions'] = [].concat(subactions);
 		this.props.onActionChanged(parentAction);
-	}
+  }
 
-	private _setSubActionExpanded(actionIndex: number, isExpanded: boolean) {
-		let { expandedSubactionIndices } = this.state;
-		let woCurrentIndex = expandedSubactionIndices.filter((i) => i != actionIndex);
-		this.setState({
-			expandedSubactionIndices: isExpanded ? woCurrentIndex.concat(actionIndex) : woCurrentIndex
-		});
-	}
+  private _getExpandedSubActions() : number[] {
+    let {allSubactionsExpanded, action, expandedSubActions} = this.props;
+    if (action.subactions && action.subactions.length  == 0) {
+      return [];
+    }
 
-	private _setAllSubactionsExpanded(isExpanded: boolean) {
-		let { action } = this.props;
-		let { expandedSubactionIndices } = this.state;
-		if (action.subactions) {
-			this.setState({
-				expandedSubactionIndices: isExpanded ? action.subactions.map((item, index) => index) : []
-			});
-		}
-	}
+    if (this.props.allSubactionsExpanded) {
+      return action.subactions.map((a, i) => i);
+    }
 
-	private _setSingleSubactionExpanded(actionIndex: number) {
-		this.setState({
-			expandedSubactionIndices: [ actionIndex ]
-		});
-	}
-
-	private _isSubactionExpanded(index: number): boolean {
-		return this.state.expandedSubactionIndices.indexOf(index) > -1;
-	}
+    return expandedSubActions;
+  }
 
 	public render(): React.ReactElement<IScriptActionEditorProps> {
-		let {
-			isExpanded,
-			action,
-			serviceScope,
-			schema,
-			onActionChanged,
-			allSubactionsExpanded,
-			canMoveDown,
-			canMoveUp
-		} = this.props;
-		let expandCollapseIcon = isExpanded ? 'CollapseContentSingle' : 'ExploreContentSingle';
+		let { action, serviceScope, schema, onActionChanged, expandedSubActions } = this.props;
 
 		const subactionsRenderer = (subactions: ISiteScriptAction[]) => (
 			<div className={styles.subactions}>
 				<h3>{this._translateLabel('subactions')}</h3>
 				<div className={styles.subactionsWorkspace}>
-					{subactions.map((subaction, index) => (
-						<div className={styles.subactionItem}>
-							<ScriptActionEditor
-								key={`SUBACTION_${index}`}
-								serviceScope={this.props.serviceScope}
-								isExpanded={this._isSubactionExpanded(index)}
-								allSubactionsExpanded={allSubactionsExpanded}
-								onExpandToggle={(expanded) => this._setSubActionExpanded(index, expanded)}
-								action={subaction}
-								getActionName={this.props.getActionName}
-								schema={this.siteScriptSchemaService.getSubActionSchema(action, subaction)}
-								onRemove={() => this._removeScriptSubAction(action, index)}
-								onActionChanged={(a) => this._onSubActionUpdated(action, index, a)}
-								canMoveDown={index < subactions.length - 1}
-								onMoveDown={() => this._moveSubactionDown(action, index)}
-								canMoveUp={index > 0}
-								onMoveUp={() => this._moveSubactionUp(action, index)}
-							/>
-						</div>
-					))}
+					<div>
+						<ScriptActionCollectionEditor
+							serviceScope={this.props.serviceScope}
+							actions={subactions}
+							onActionRemoved={(subActionIndex) => this._removeScriptSubAction(action, subActionIndex)}
+							onActionMoved={(oldIndex, newIndex) => this._moveSubAction(action, oldIndex, newIndex)}
+							onActionChanged={(subActionIndex, subAction) =>
+								this._onSubActionUpdated(action, subActionIndex, subAction)}
+							getActionSchema={(subAction) =>
+								this.siteScriptSchemaService.getSubActionSchema(action, subAction)}
+							expandedIndices={this._getExpandedSubActions()}
+							onExpandChanged={(expanded) => this._onSubActionsExpandChanged(expanded)}
+						/>
+					</div>
 					<div>
 						<ScriptActionAdder
 							parentAction={action}
@@ -171,86 +124,32 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		);
 
 		return (
-			<div className={styles.scriptActionEditor}>
-				<div className="ms-Grid-row">
-					<div className="ms-Grid-col ms-sm8">
-						<h2 className={styles.title}>
-							{this._translateLabel(this._getCurrentActionName())}
-						</h2>
-					</div>
-					<div className="ms-Grid-col ms-sm4">
-						<div className={styles.commandButtonsContainer}>
-							<div className={styles.commandButtons}>
-								<IconButton
-									iconProps={{ iconName: 'Up' }}
-									onClick={() => this._onMoveUp()}
-									disabled={!canMoveUp}
-								/>
-								<IconButton
-									iconProps={{ iconName: 'Down' }}
-									onClick={() => this._onMoveDown()}
-									disabled={!canMoveDown}
-								/>
-								<IconButton
-									iconProps={{ iconName: expandCollapseIcon }}
-									onClick={() => this._toggleIsExpanded()}
-								/>
-								<IconButton
-									iconProps={{ iconName: 'ChromeClose' }}
-									onClick={() => this.props.onRemove()}
-								/>
-							</div>
-						</div>
-					</div>
+			<div className="ms-Grid-row">
+				<div className="ms-Grid-col ms-sm12">
+					<GenericObjectEditor
+						customRenderers={{ subactions: subactionsRenderer }}
+						defaultValues={{ subactions: [] }}
+						object={action}
+						schema={schema}
+						ignoredProperties={[ 'verb' ]}
+            onObjectChanged={onActionChanged.bind(this)}
+            updateOnBlur={true}
+					/>
 				</div>
-				{isExpanded && (
-					<div className="ms-Grid-row">
-						<div className="ms-Grid-col ms-sm12">
-							<GenericObjectEditor
-								customRenderers={{ subactions: subactionsRenderer }}
-								defaultValues={{ subactions: [] }}
-								object={action}
-								schema={schema}
-								ignoredProperties={[ 'verb' ]}
-								onObjectChanged={onActionChanged.bind(this)}
-							/>
-						</div>
-					</div>
-				)}
 			</div>
 		);
 	}
 
-	private _onMoveUp() {
-		if (this.props.onMoveUp) {
-			this.props.onMoveUp();
-		}
-	}
-
-	private _onMoveDown() {
-		if (this.props.onMoveDown) {
-			this.props.onMoveDown();
-		}
-	}
-
-	private _moveSubactionUp(parentAction: ISiteScriptAction, index: number) {
-		this._swapSubActions(parentAction, index, index - 1);
-	}
-
-	private _moveSubactionDown(parentAction: ISiteScriptAction, index: number) {
-		this._swapSubActions(parentAction, index, index + 1);
-	}
-
-	private _swapSubActions(parentAction: ISiteScriptAction, oldIndex: number, newIndex: number) {
+	private _moveSubAction(parentAction: ISiteScriptAction, oldIndex: number, newIndex: number) {
 		if (newIndex < 0 || newIndex > parentAction.subactions.length - 1) {
 			return;
 		}
 
 		let newSubActions = [].concat(parentAction.subactions);
 
-		let old = newSubActions[oldIndex];
-		newSubActions[oldIndex] = newSubActions[newIndex];
-		newSubActions[newIndex] = old;
+    let actionToMove = newSubActions[oldIndex];
+    newSubActions.splice(oldIndex, 1);
+    newSubActions.splice(newIndex, 0, actionToMove);
 
 		let updatedAction = assign({}, parentAction);
 		updatedAction.subactions = newSubActions;
@@ -265,7 +164,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		let newSubActions = [].concat(parentAction.subactions, newSubAction);
 		let updatedAction = assign({}, parentAction);
 		updatedAction.subactions = newSubActions;
-		this._setSingleSubactionExpanded(newSubActions.length - 1);
+		// this._setSingleSubactionExpanded(newSubActions.length - 1);
 		this.props.onActionChanged(updatedAction);
 	}
 
@@ -274,6 +173,12 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		let updatedAction = assign({}, parentAction);
 		updatedAction.subactions = newSubActions;
 		this.props.onActionChanged(updatedAction);
+	}
+
+	private _onSubActionsExpandChanged(expanded: number[]) {
+		if (this.props.onSubActionsExpandChanged) {
+      this.props.onSubActionsExpandChanged(expanded);
+    }
 	}
 
 	private _onSubActionUpdated(

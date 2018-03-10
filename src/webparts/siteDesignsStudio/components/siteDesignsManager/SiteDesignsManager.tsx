@@ -24,6 +24,8 @@ import { ISiteScriptContent } from '../../models/ISiteScript';
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
 import { ISiteDesign, SiteDesignEntitySchema, WebTemplate } from '../../models/ISiteDesign';
 import SiteDesignEditor from '../siteDesignEditor/SiteDesignEditor';
+import { ConfirmDialog, Confirm } from '../confirmBox/ConfirmBox';
+import { Dialog } from '@microsoft/sp-dialog';
 
 export interface ISiteDesignsManagerProps extends IServiceConsumerComponentProps {}
 export interface ISiteDesignsManagerState {
@@ -88,7 +90,7 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 				</div>
 				<div className="ms-Grid-row">
 					{siteDesigns.map((sd) => (
-						<div className="ms-Grid-col ms-sm12 ms-xl6">
+						<div className="ms-Grid-col ms-sm12 ms-md6 ms-lg4">
 							<div className={styles.siteDesignItem}>{this._renderSiteDesign(sd)}</div>
 						</div>
 					))}
@@ -235,28 +237,41 @@ export default class SiteDesignsManager extends React.Component<ISiteDesignsMana
 	}
 
 	private _removeSiteDesign(siteDesign: ISiteDesign) {
-		if (confirm(`Are you sure you want to delete '${siteDesign.Title}'`)) {
-			this.siteDesignsService
-				.deleteSiteDesign(siteDesign)
-				.then(() => this._loadSiteDesigns())
-				.then((siteDesigns) => {
-					this.setState({
-						siteDesigns: siteDesigns,
-						isLoading: false,
-						isEditing: false,
-						siteDesignEdition: null,
-						userMessage: 'The Site Design has been properly deleted'
+		Confirm.show({
+      title: `Delete ${siteDesign.Title}`,
+			message: `Are you sure you want to delete '${siteDesign.Title}'`,
+			okLabel: 'Yes',
+			cancelLabel: 'No'
+		})
+			.then(() => {
+				this.siteDesignsService
+					.deleteSiteDesign(siteDesign)
+					.then(() => {
+						console.log('Deletion succeeded');
+						return this._loadSiteDesigns();
+					})
+					.then((siteDesigns) => {
+						this.setState({
+							siteDesigns: siteDesigns,
+							isLoading: false,
+							isEditing: false,
+							siteDesignEdition: null,
+							userMessage: 'The Site Design has been properly deleted'
+						});
+					})
+					.catch((error) => {
+						console.log(error);
+						this.setState({
+							hasError: true,
+							userMessage: 'The Site Design cannot be deleted',
+							isLoading: false,
+							isEditing: false,
+							siteDesignEdition: null
+						});
 					});
-				})
-				.catch((error) => {
-					this.setState({
-						hasError: true,
-						userMessage: 'The Site Design cannot be deleted',
-						isLoading: false,
-						isEditing: false,
-						siteDesignEdition: null
-					});
-				});
-		}
+			})
+			.catch(() => {
+				console.log('Deletion is canceled');
+			});
 	}
 }

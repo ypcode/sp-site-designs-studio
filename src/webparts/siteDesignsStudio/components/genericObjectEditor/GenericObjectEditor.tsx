@@ -17,7 +17,8 @@ export interface IGenericObjectEditorProps {
 	customRenderers?: any;
 	ignoredProperties?: string[];
 	readOnlyProperties?: string[];
-	onObjectChanged?: (object: any) => void;
+  onObjectChanged?: (object: any) => void;
+  updateOnBlur?: boolean;
 }
 
 export default class GenericObjectEditor extends React.Component<IGenericObjectEditorProps, {}> {
@@ -75,7 +76,9 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 				case 'boolean':
 					return false;
 				case 'number':
-					return 0;
+          return 0;
+          case 'object':
+          return {};
 				default:
 					return null;
 			}
@@ -93,16 +96,6 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 			return null;
 		}
 	}
-
-	// private _initializeCustomPropertyRenderers() {
-	//   React.Children.forEach(this.props.children, (child, index) => {
-	//     let castedChild = (child as React.ReactElement<any>);
-	//     if (React.isValidElement(child) && castedChild.type === GenericObjectPropertyRenderer) {
-	//       let propertyName = castedChild.props["propertyName"];
-	//       this.customPropertyRenderers[propertyName] = castedChild;
-	//     }
-	//   });
-	// }
 
 	public render(): React.ReactElement<IGenericObjectEditorProps> {
 		let { schema, ignoredProperties } = this.props;
@@ -139,6 +132,25 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 		return strings[key] || value;
 	}
 
+	private editTextValues: any;
+	private _onTextFieldValueChanged(fieldName: string, value: any) {
+    if (this.props.updateOnBlur) {
+      if (!this.editTextValues) {
+        this.editTextValues = {};
+      }
+      this.editTextValues[fieldName] = value;
+    }
+		else {
+      this._onObjectPropertyChange(fieldName, value);
+    }
+	}
+
+	private _onTextFieldEdited(fieldName: string) {
+    let value = this.editTextValues[fieldName];
+    this._onObjectPropertyChange(fieldName, value);
+    delete this.editTextValues[fieldName];
+	}
+
 	private _renderPropertyEditor(propertyName: string, property: ISchemaProperty) {
 		let { schema, object, customRenderers } = this.props;
 
@@ -166,7 +178,8 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 						label={this._translateLabel(propertyName)}
 						value={object[propertyName]}
 						readOnly={true}
-						onChanged={(value) => this._onObjectPropertyChange(propertyName, value)}
+            onChanged={(value) => this._onTextFieldValueChanged(propertyName, value)}
+            onBlur={() => this._onTextFieldEdited(propertyName)}
 					/>
 				);
 			}
@@ -189,7 +202,8 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 							label={this._translateLabel(propertyName)}
 							value={object[propertyName]}
 							readOnly={this._isPropertyReadOnly(propertyName)}
-							onChanged={(value) => this._onObjectPropertyChange(propertyName, value)}
+              onChanged={(value) => this._onTextFieldValueChanged(propertyName, value)}
+              onBlur={() => this._onTextFieldEdited(propertyName)}
 						/>
 					);
 			}

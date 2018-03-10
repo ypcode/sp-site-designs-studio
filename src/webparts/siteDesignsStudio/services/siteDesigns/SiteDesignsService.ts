@@ -40,9 +40,13 @@ export class SiteDesignsService implements ISiteDesignsService {
 			}
 		};
 		console.log('URL=', restUrl, ' REQUEST OPTIONS=', options);
-		return this.spHttpClient
-			.post(restUrl, SPHttpClient.configurations.v1, options)
-			.then((response) => response.json());
+		return this.spHttpClient.post(restUrl, SPHttpClient.configurations.v1, options).then((response) => {
+			if (response.status == 204) {
+				return {};
+			} else {
+				return response.json();
+			}
+		});
 	}
 
 	public getSiteDesigns(): Promise<ISiteDesign[]> {
@@ -55,8 +59,8 @@ export class SiteDesignsService implements ISiteDesignsService {
 			'/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata',
 			{ id: siteDesignId }
 		).then((resp) => resp as ISiteDesign);
-  }
-  public deleteSiteDesign(siteDesign: ISiteDesign | string): Promise<void> {
+	}
+	public deleteSiteDesign(siteDesign: ISiteDesign | string): Promise<void> {
 		let id = typeof siteDesign === 'string' ? siteDesign as string : (siteDesign as ISiteDesign).Id;
 		return this._restRequest(
 			'/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.DeleteSiteDesign',
@@ -74,7 +78,7 @@ export class SiteDesignsService implements ISiteDesignsService {
 						Title: siteDesign.Title,
 						Description: siteDesign.Description,
 						SiteScriptIds: siteDesign.SiteScriptIds,
-            WebTemplate: siteDesign.WebTemplate.toString(),
+						WebTemplate: siteDesign.WebTemplate.toString(),
 						PreviewImageUrl: siteDesign.PreviewImageUrl,
 						PreviewImageAltText: siteDesign.PreviewImageAltText,
 						Version: siteDesign.Version,

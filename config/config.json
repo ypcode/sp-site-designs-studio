@@ -11,7 +11,12 @@
       ]
     }
   },
-  "externals": {},
+  "externals": {
+    "monaco": {
+      "path": "/src/MonacoCustomBuild/index.js",
+      "globalName": "monaco"
+    }
+  },
   "localizedResources": {
     "SiteDesignsStudioWebPartStrings": "lib/webparts/siteDesignsStudio/loc/{locale}.js"
   }

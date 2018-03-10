@@ -1,19 +1,20 @@
 import { ISiteScriptAction } from '../../models/ISiteScript';
-import Schema from '../../schema/schema';
+import DefaultSchema from '../../schema/schema';
 import { ServiceScope, ServiceKey } from '@microsoft/sp-core-library';
 
 export interface ISiteScriptSchemaService {
-	getActionSchemaAsync(action: ISiteScriptAction): Promise<any>;
+  configure(schema?: any): Promise<any>;
+  getNewSiteScript() : any;
+	getSiteScriptSchema(): any;
 	getActionSchema(action: ISiteScriptAction): any;
 	getSubActionSchema(parentAction: ISiteScriptAction, subAction: ISiteScriptAction): any;
-	getAvailableActionsAsync(): Promise<string[]>;
 	getAvailableActions(): string[];
-  getAvailableSubActions(parentAction: ISiteScriptAction): string[];
-  getAvailableSubActionsAsync(parentAction: ISiteScriptAction): Promise<string[]>;
+	getAvailableSubActions(parentAction: ISiteScriptAction): string[];
 }
 
 export class SiteScriptSchemaService implements ISiteScriptSchemaService {
-	private isInitialized: boolean = false;
+	private schema: any = null;
+	private isConfigured: boolean = false;
 	private availableActions: string[] = null;
 	private availableSubActionByVerb: {} = null;
 	private availableActionSchemas = null;
@@ -21,93 +22,12 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 
 	constructor(serviceScope: ServiceScope) {}
 
-	private ensureInitialized(): Promise<void> {
-		return this._getSchema().then((schema) => {
-			if (this.isInitialized) {
-				return;
-			}
 
-			// Get available action schemas
-			let actionsArraySchema = schema.properties.actions;
-
-			if (!actionsArraySchema.type || actionsArraySchema.type != 'array') {
-				throw new Error('Invalid Actions schema');
-			}
-
-			if (!actionsArraySchema.items || !actionsArraySchema.items.anyOf) {
-				throw new Error('Invalid Actions schema');
-			}
-
-			let actionsArraySchemaItems = actionsArraySchema.items;
-
-			// Get Main Actions schema
-			let availableActionSchemasAsArray: any[] = actionsArraySchemaItems.anyOf.map((action) =>
-				this._getElementSchema(schema, action)
-			);
-			this.availableActionSchemas = {};
-			availableActionSchemasAsArray.forEach((a) => {
-				// Keep the current action schema
-				let actionVerb = this._getVerbFromActionSchema(a);
-				this.availableActionSchemas[actionVerb] = a;
-
-				// Check if the current action has subactions
-				let subActionSchemas = this._getSubActionsSchemaFromParentActionSchema(schema, a);
-				if (subActionSchemas) {
-					// If yes, keep the sub actions schema and verbs
-
-					// Keep the list of subactions verbs
-					if (!this.availableSubActionByVerb) {
-						this.availableSubActionByVerb = {};
-					}
-					this.availableSubActionByVerb[actionVerb] = subActionSchemas.map((sa) =>
-						this._getVerbFromActionSchema(sa)
-					);
-
-					// Keep the list of subactions schemas
-					if (!this.availableSubActionSchemasByVerb) {
-						this.availableSubActionSchemasByVerb = {};
-					}
-					this.availableSubActionSchemasByVerb[actionVerb] = {};
-					subActionSchemas.forEach((sas) => {
-						let subActionVerb = this._getVerbFromActionSchema(sas);
-						this.availableSubActionSchemasByVerb[actionVerb][subActionVerb] = sas;
-					});
-				}
-			});
-			this.availableActions = availableActionSchemasAsArray.map((a) => this._getVerbFromActionSchema(a));
-
-			// // For each of the any Of, get the appropriate definition
-			// let definitionRelativeReferences: any[] = actionsArraySchemaItems.anyOf.map((d) =>
-			// 	d['$ref'].replace('#/definitions/', '')
-			// );
-
-			// this.availableActionSchemas = {};
-			// this.availableActionSchemasByVerb = {};
-			// this.availableSubActionSchemasByVerb = {};
-			// this.availableActions = [];
-			// definitionRelativeReferences.forEach((drr) => {
-			// 	let actionSchema = schema.definitions[drr];
-			// 	this.availableActionSchemas[drr] = actionSchema;
-
-			// 	let actionVerb = this._getVerbFromActionSchema(actionSchema);
-			// 	this.availableActions.push(actionVerb);
-			// 	this.availableActionSchemasByVerb[actionVerb] = actionSchema;
-			// 	// Do this only if current action has subactions definitions
-			// 	// this.availableSubActionByVerb[actionVerb] = [];
-			// 	// this.availableSubActionSchemasByVerb[actionVerb] = [];
-			// });
-		});
-	}
-
-	private _getSchema(): Promise<any> {
-		return Promise.resolve(Schema);
-	}
-
-	private _getElementSchema(schema: any, object: any, property: string = null): any {
+	private _getElementSchema(object: any, property: string = null): any {
 		let value = !property ? object : object[property];
 		if (value['$ref']) {
 			let definitionKey = value['$ref'].replace('#/definitions/', '');
-			return schema.definitions[definitionKey];
+			return this.schema.definitions[definitionKey];
 		}
 
 		return value;
@@ -126,7 +46,7 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 		return actionDefinition.properties.verb.enum[0];
 	}
 
-	private _getSubActionsSchemaFromParentActionSchema(schema: any, parentActionDefinition: any): any[] {
+	private _getSubActionsSchemaFromParentActionSchema(parentActionDefinition: any): any[] {
 		if (!parentActionDefinition.properties) {
 			throw new Error('Invalid Action schema');
 		}
@@ -143,57 +63,139 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 			throw new Error('Invalid Action schema');
 		}
 
-		return parentActionDefinition.properties.subactions.items.anyOf.map((sa) => this._getElementSchema(schema, sa));
+		return parentActionDefinition.properties.subactions.items.anyOf.map((subActionSchema) => this._getElementSchema(subActionSchema));
 	}
 
-	public getActionSchemaAsync(action: ISiteScriptAction): Promise<any> {
-		return this.ensureInitialized().then(() => this.availableActionSchemas[action.verb]);
+	public configure(schema?: any): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if (this.isConfigured) {
+				resolve();
+				return;
+			}
+
+			this.schema = schema || DefaultSchema;
+
+			try {
+				// Get available action schemas
+				let actionsArraySchema = this.schema.properties.actions;
+
+				if (!actionsArraySchema.type || actionsArraySchema.type != 'array') {
+					throw new Error('Invalid Actions schema');
+				}
+
+				if (!actionsArraySchema.items || !actionsArraySchema.items.anyOf) {
+					throw new Error('Invalid Actions schema');
+				}
+
+				let actionsArraySchemaItems = actionsArraySchema.items;
+
+				// Get Main Actions schema
+				let availableActionSchemasAsArray: any[] = actionsArraySchemaItems.anyOf.map((action) =>
+					this._getElementSchema(action)
+				);
+				this.availableActionSchemas = {};
+				availableActionSchemasAsArray.forEach((actionSchema) => {
+					// Keep the current action schema
+					let actionVerb = this._getVerbFromActionSchema(actionSchema);
+					this.availableActionSchemas[actionVerb] = actionSchema;
+
+					// Check if the current action has subactions
+					let subActionSchemas = this._getSubActionsSchemaFromParentActionSchema(actionSchema);
+					if (subActionSchemas) {
+						// If yes, keep the sub actions schema and verbs
+
+						// Keep the list of subactions verbs
+						if (!this.availableSubActionByVerb) {
+							this.availableSubActionByVerb = {};
+						}
+						this.availableSubActionByVerb[actionVerb] = subActionSchemas.map((sa) =>
+							this._getVerbFromActionSchema(sa)
+						);
+
+						// Keep the list of subactions schemas
+						if (!this.availableSubActionSchemasByVerb) {
+							this.availableSubActionSchemasByVerb = {};
+						}
+						this.availableSubActionSchemasByVerb[actionVerb] = {};
+						subActionSchemas.forEach((sas) => {
+							let subActionVerb = this._getVerbFromActionSchema(sas);
+							this.availableSubActionSchemasByVerb[actionVerb][subActionVerb] = sas;
+						});
+					}
+				});
+				this.availableActions = availableActionSchemasAsArray.map((a) => this._getVerbFromActionSchema(a));
+
+        this.isConfigured = true;
+				resolve();
+			} catch (error) {
+				reject(error);
+			}
+		});
+  }
+
+  public getNewSiteScript() : any {
+    return {
+      $schema: "schema.json",
+			actions: [],
+			bindata: {},
+			version: 1
+		};
+  }
+
+	public getSiteScriptSchema(): any {
+		return this.schema;
 	}
 
 	public getActionSchema(action: ISiteScriptAction): any {
-    let directResolvedSchema = this.availableActionSchemas[action.verb];
-    if (directResolvedSchema) {
-      return directResolvedSchema;
-    }
+		if (!this.isConfigured) {
+			throw new Error('The Schema Service is not properly configured. Make sure the configure() method has been called.');
+		}
 
-    // Try to find the schema by case insensitive key
-    let availableActionKeys = Object.keys(this.availableActionSchemas);
-    let foundKeys = availableActionKeys.filter(k => k.toUpperCase() == action.verb.toUpperCase());
-    let actionSchemaKey = foundKeys.length == 1 ? foundKeys[0] : null;
-    return this.availableActionSchemas[actionSchemaKey];
+		let directResolvedSchema = this.availableActionSchemas[action.verb];
+		if (directResolvedSchema) {
+			return directResolvedSchema;
+		}
+
+		// Try to find the schema by case insensitive key
+		let availableActionKeys = Object.keys(this.availableActionSchemas);
+		let foundKeys = availableActionKeys.filter((k) => k.toUpperCase() == action.verb.toUpperCase());
+		let actionSchemaKey = foundKeys.length == 1 ? foundKeys[0] : null;
+		return this.availableActionSchemas[actionSchemaKey];
 	}
 
 	public getSubActionSchema(parentAction: ISiteScriptAction, subAction: ISiteScriptAction): any {
-    // return this.availableSubActionSchemasByVerb[parentAction.verb][subAction.verb];
+		if (!this.isConfigured) {
+			throw new Error('The Schema Service is not properly configured. Make sure the configure() method has been called.');
+		}
 
-    let availableSubActionSchemas = this.availableSubActionSchemasByVerb[parentAction.verb];
-    let directResolvedSchema = availableSubActionSchemas[subAction.verb];
-    if (directResolvedSchema) {
-      return directResolvedSchema;
-    }
+		let availableSubActionSchemas = this.availableSubActionSchemasByVerb[parentAction.verb];
+		let directResolvedSchema = availableSubActionSchemas[subAction.verb];
+		if (directResolvedSchema) {
+			return directResolvedSchema;
+		}
 
-    // Try to find the schema by case insensitive key
-    let availableSubActionKeys = Object.keys(availableSubActionSchemas);
-    let foundKeys = availableSubActionKeys.filter(k => k.toUpperCase() == subAction.verb.toUpperCase());
-    let subActionSchemaKey = foundKeys.length == 1 ? foundKeys[0] : null;
-    return availableSubActionSchemas[subActionSchemaKey];
-	}
-
-	public getAvailableActionsAsync(): Promise<string[]> {
-		return this.ensureInitialized().then(() => this.availableActions);
+		// Try to find the schema by case insensitive key
+		let availableSubActionKeys = Object.keys(availableSubActionSchemas);
+		let foundKeys = availableSubActionKeys.filter((k) => k.toUpperCase() == subAction.verb.toUpperCase());
+		let subActionSchemaKey = foundKeys.length == 1 ? foundKeys[0] : null;
+		return availableSubActionSchemas[subActionSchemaKey];
 	}
 
 	public getAvailableActions(): string[] {
+		if (!this.isConfigured) {
+			throw new Error('The Schema Service is not properly configured. Make sure the configure() method has been called.');
+		}
+
 		return this.availableActions;
 	}
 
 	public getAvailableSubActions(parentAction: ISiteScriptAction): string[] {
-		return this.availableSubActionByVerb[parentAction.verb];
-  }
+		if (!this.isConfigured) {
+			throw new Error('The Schema Service is not properly configured. Make sure the configure() method has been called.');
+		}
 
-  public getAvailableSubActionsAsync(parentAction: ISiteScriptAction) : Promise<string[]> {
-    return this.ensureInitialized().then(() => this.availableSubActionByVerb[parentAction.verb]);
-  }
+		return this.availableSubActionByVerb[parentAction.verb];
+	}
 }
 
 export const SiteScriptSchemaServiceKey = ServiceKey.create<ISiteScriptSchemaService>(

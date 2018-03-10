@@ -15,7 +15,7 @@ import {
 	MessageBarType,
 	IconButton,
 	ActionButton,
-  DialogFooter
+	DialogFooter
 } from 'office-ui-fabric-react';
 import styles from '../SiteDesignsStudio.module.scss';
 import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
@@ -24,6 +24,8 @@ import { escape, assign } from '@microsoft/sp-lodash-subset';
 import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
 import { ISiteScriptContent, ISiteScript, SiteScriptEntitySchema } from '../../models/ISiteScript';
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
+import { Log } from '@microsoft/sp-core-library';
+import { ConfirmDialog, Confirm } from '../confirmBox/ConfirmBox';
 
 export interface ISiteScriptsManagerProps extends IServiceConsumerComponentProps {
 	onScriptContentEdit: (siteScript: ISiteScript) => void;
@@ -105,7 +107,7 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 				</div>
 				<div className="ms-Grid-row">
 					{siteScripts.map((sd, ndx) => (
-						<div className="ms-Grid-col ms-sm12" key={'SD_' + ndx}>
+						<div className="ms-Grid-col ms-sm12 ms-md6" key={'SD_' + ndx}>
 							<div className={styles.siteDesignItem}>{this._renderSiteScriptItem(sd)}</div>
 						</div>
 					))}
@@ -125,9 +127,18 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 	}
 
 	private _deleteConfirm(siteScript: ISiteScript) {
-		if (confirm(`Are you sure you want to delete this Site Script '${siteScript.Title}'?`)) {
-			this._deleteScript(siteScript);
-		}
+		Confirm.show({
+      title: `Delete ${siteScript.Title}`,
+			message: `Are you sure you want to delete this Site Script '${siteScript.Title}'?`,
+			okLabel: 'Yes',
+			cancelLabel: 'No'
+		})
+			.then(() => {
+				this._deleteScript(siteScript);
+			})
+			.catch(() => {
+				console.log('Deletion canceled');
+			});
 	}
 
 	private _clearError() {
@@ -169,22 +180,31 @@ export default class SiteScriptsManager extends React.Component<ISiteScriptsMana
 		);
 	}
 
-
 	private _deleteScript(siteScript: ISiteScript) {
 		this.setState({ isLoading: true });
 		this.siteDesignsService
 			.deleteSiteScript(siteScript)
 			.then((_) => {
+				Log.info(
+					'SiteScriptsManager',
+					`Site Script '${siteScript.Id}' has been deleted`,
+					this.props.serviceScope
+				);
 				this.setState({
-          userMessage: 'The site script has been properly deleted',
-          hasError: false
+					userMessage: 'The site script has been properly deleted',
+					hasError: false
 				});
 			})
 			.then(() => this._loadSiteScripts(true))
 			.catch((error) => {
+				Log.error(
+					`An error occured while trying to delete Site Script '${siteScript.Id}'`,
+					error,
+					this.props.serviceScope
+				);
 				this.setState({
 					hasError: true,
-          userMessage: 'The site script cannot be deleted'
+					userMessage: 'The site script cannot be deleted'
 				});
 			});
 	}

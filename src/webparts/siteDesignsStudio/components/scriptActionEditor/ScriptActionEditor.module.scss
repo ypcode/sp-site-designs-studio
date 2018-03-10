@@ -3,27 +3,27 @@
 .scriptActionEditor {
 	padding: 5px;
 	padding-top: 0;
-  border: 1px solid $ms-color-themeDark;
+	border: 1px solid $ms-color-themeDark;
 	border-radius: 5px;
 	background-color: white;
 	margin: 5px;
+  cursor: pointer;
 
 	.title {
-    color: darkblue;
-    padding-top: 2px;
+		color: $ms-color-themeDark;
+		padding-top: 2px;
 		margin-top: 0;
 		margin-bottom: 0;
 	}
 
-  .commandButtonsContainer {
-    position: relative;
+	.commandButtonsContainer {
+		position: relative;
 
-    .commandButtons {
-      position: absolute;
-      right: 1px;
-    }
-  }
-
+		.commandButtons {
+			position: absolute;
+			right: 1px;
+		}
+	}
 
 	.subactions {
 		.scriptActionAdder {

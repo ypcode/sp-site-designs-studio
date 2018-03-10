@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { IconButton, Icon, Panel, PanelType } from 'office-ui-fabric-react';
+import { IconButton, Icon, Panel, PanelType, Spinner, SpinnerSize } from 'office-ui-fabric-react';
 import styles from './ScriptActionAdder.module.scss';
 import * as strings from 'SiteDesignsStudioWebPartStrings';
 import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
@@ -14,6 +14,7 @@ import {
 
 export interface IScriptActionAdderState {
 	isAdding: boolean;
+	isLoading: boolean;
 	availableActions: string[];
 }
 
@@ -28,30 +29,29 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 	constructor(props: IScriptActionAdderProps) {
 		super(props);
 
-		this.props.serviceScope.whenFinished(() => {
-			this.siteScriptSchemaService = this.props.serviceScope.consume(SiteScriptSchemaServiceKey);
-		});
-
 		this.state = {
 			isAdding: false,
+			isLoading: true,
 			availableActions: []
 		};
 	}
 
 	public componentWillMount() {
-		if (!this.props.parentAction) {
-			this.siteScriptSchemaService.getAvailableActionsAsync().then((actions) => {
+		this.props.serviceScope.whenFinished(() => {
+			this.siteScriptSchemaService = this.props.serviceScope.consume(SiteScriptSchemaServiceKey);
+
+			if (!this.props.parentAction) {
 				this.setState({
-					availableActions: actions
+					availableActions: this.siteScriptSchemaService.getAvailableActions(),
+					isLoading: false
 				});
-			});
-		} else {
-			this.siteScriptSchemaService.getAvailableSubActionsAsync(this.props.parentAction).then((actions) => {
+			} else {
 				this.setState({
-					availableActions: actions
+					availableActions: this.siteScriptSchemaService.getAvailableSubActions(this.props.parentAction),
+					isLoading: false
 				});
-			});
-		}
+			}
+		});
 	}
 
 	private _addNewAction() {
@@ -73,6 +73,7 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 	}
 
 	public render(): React.ReactElement<ISiteDesignsStudioProps> {
+		let { isLoading } = this.state;
 		return (
 			<div className={styles.scriptActionAdder}>
 				<div
@@ -87,24 +88,34 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 					headerText="Add a Script Action"
 					onDismiss={() => this._onPanelDismiss()}
 				>
-					<div className="ms-Grid-row">
-						{this.state.availableActions.map((a, index) => (
-							<div key={index} className="ms-Grid-col ms-sm12">
-								<div className={styles.actionButtonContainer}>
-									<div className={styles.actionButton} onClick={() => this._onActionAdded(a)}>
-										<div className="ms-Grid-col ms-sm4">
-											<div className={styles.actionIcon}>
-												<Icon iconName="SetAction" />
+					{isLoading ? (
+						<div className="ms-Grid-row">
+							<div className="ms-Grid-col ms-sm6 ms-smOffset3">
+								<Spinner size={SpinnerSize.large} label="Loading..." />
+							</div>
+						</div>
+					) : (
+						<div className="ms-Grid-row">
+							{this.state.availableActions.map((a, index) => (
+								<div key={index} className="ms-Grid-col ms-sm12">
+									<div className={styles.actionButtonContainer}>
+										<div className={styles.actionButton} onClick={() => this._onActionAdded(a)}>
+											<div className="ms-Grid-col ms-sm4">
+												<div className={styles.actionIcon}>
+													<Icon iconName="SetAction" />
+												</div>
 											</div>
-										</div>
-										<div className="ms-Grid-col ms-sm8">
-											<div className={styles.actionButtonLabel}>{this._translateLabel(a)}</div>
+											<div className="ms-Grid-col ms-sm8">
+												<div className={styles.actionButtonLabel}>
+													{this._translateLabel(a)}
+												</div>
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-						))}
-					</div>
+							))}
+						</div>
+					)}
 				</Panel>
 			</div>
 		);

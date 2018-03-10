@@ -17,6 +17,10 @@
   .actionAddIcon.subactions {
 		font-size: 30px;
   }
+
+    .actionAddIcon:hover {
+		color: $ms-color-themeDark;
+	}
 }
 
 .actionButtonContainer {

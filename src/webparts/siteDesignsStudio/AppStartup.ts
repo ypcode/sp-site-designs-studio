@@ -1,3 +1,7 @@
+import {
+	ISiteScriptSchemaService,
+	SiteScriptSchemaServiceKey
+} from './services/siteScriptSchema/SiteScriptSchemaService';
 import { ServiceScope } from '@microsoft/sp-core-library';
 import { IWebPartContext } from '@microsoft/sp-webpart-base';
 import { Environment, EnvironmentType } from '@microsoft/sp-core-library';
@@ -6,7 +10,6 @@ import { MockSiteDesignsService } from './services/siteDesigns/MockSiteDesignsSe
 
 export class AppStartup {
 	public static configureServices(appContext: IWebPartContext): Promise<ServiceScope> {
-    console.log("Env=", Environment.type);
 		switch (Environment.type) {
 			case EnvironmentType.Local:
 			case EnvironmentType.Test:
@@ -28,8 +31,19 @@ export class AppStartup {
 				childScope.finish();
 
 				childScope.whenFinished(() => {
-					// If other services must be used, it must done HERE
-					resolve(childScope);
+					// If other services must be configured, it must done HERE
+					// Configure the Schema Service
+					let schemaService: ISiteScriptSchemaService = rootServiceScope.consume<ISiteScriptSchemaService>(
+						SiteScriptSchemaServiceKey
+					);
+					schemaService
+						.configure()
+						.then(() => {
+							resolve(childScope);
+						})
+						.catch((error) => {
+							reject(error);
+						});
 				});
 			});
 		});
@@ -39,11 +53,25 @@ export class AppStartup {
 		return new Promise((resolve, reject) => {
 			let rootServiceScope = appContext.host.serviceScope;
 			rootServiceScope.whenFinished(() => {
-        // Configure the service with the current context url
-        let siteDesignsService: ISiteDesignsService = rootServiceScope.consume<ISiteDesignsService>(SiteDesignsServiceKey);
-        siteDesignsService.baseUrl = appContext.pageContext.web.serverRelativeUrl;
-        resolve(rootServiceScope);
-      });
+				// Configure the Site Designs service with the current context url
+				let siteDesignsService: ISiteDesignsService = rootServiceScope.consume<ISiteDesignsService>(
+					SiteDesignsServiceKey
+				);
+				siteDesignsService.baseUrl = appContext.pageContext.web.serverRelativeUrl;
+
+				// Configure the Schema Service
+				let schemaService: ISiteScriptSchemaService = rootServiceScope.consume<ISiteScriptSchemaService>(
+					SiteScriptSchemaServiceKey
+				);
+				schemaService
+					.configure()
+					.then(() => {
+						resolve(rootServiceScope);
+					})
+					.catch((error) => {
+						reject(error);
+					});
+			});
 		});
 	}
 }

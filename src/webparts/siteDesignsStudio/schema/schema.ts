@@ -1,5 +1,5 @@
 export default  {
-	"$schema": "http://json-schema.org/draft-06/schema#",
+  "$schema": "http://json-schema.org/draft-06/schema#",
 	"title": "SiteScript",
 	"description": "A SharePoint Site Script definition",
 	"definitions": {

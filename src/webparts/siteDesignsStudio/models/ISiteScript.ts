@@ -4,6 +4,7 @@ export interface ISiteScriptAction {
 }
 
 export interface ISiteScriptContent {
+  $schema?: string;
   actions : (any | ISiteScriptAction)[];
   bindata: {};
   version: number;
