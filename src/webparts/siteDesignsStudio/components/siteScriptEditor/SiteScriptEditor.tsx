@@ -35,6 +35,8 @@ import { SiteDesignsServiceKey, ISiteDesignsService } from '../../services/siteD
 import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
 import { MonacoEditor } from '../monacoEditor/MonacoEditor';
 import ScriptActionCollectionEditor from '../scriptActionEditor/ScriptActionCollectionEditor';
+import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
+import _ = require('lodash');
 
 const Ajv = require('ajv');
 var ajv = new Ajv({ schemaId: 'auto' });
@@ -48,6 +50,7 @@ export enum EEditionMode {
 export interface ISiteScriptEditorState {
 	script: ISiteScript;
 	scriptContentJson: string;
+	scriptActionUIs: ISiteScriptActionUIWrapper[];
 	schema: any;
 	isValidContent: boolean;
 	isInvalidSchema: boolean;
@@ -56,9 +59,9 @@ export interface ISiteScriptEditorState {
 	isLoading: boolean;
 	hasError: boolean;
 	userMessage: string;
-	expandedIndices: number[];
-	allSubactionsExpanded: boolean;
 	isEditingProperties: boolean;
+	allExpanded: boolean;
+	allCollapsed: boolean;
 }
 
 export interface ISiteScriptEditorProps extends IServiceConsumerComponentProps {
@@ -68,8 +71,8 @@ export interface ISiteScriptEditorProps extends IServiceConsumerComponentProps {
 
 export default class SiteScriptEditor extends React.Component<ISiteScriptEditorProps, ISiteScriptEditorState> {
 	private siteScriptSchemaService: ISiteScriptSchemaService;
-  private siteDesignsService: ISiteDesignsService;
-  private stateHistory: ISiteScriptEditorState[];
+	private siteDesignsService: ISiteDesignsService;
+	private stateHistory: ISiteScriptEditorState[];
 
 	constructor(props: ISiteScriptEditorProps) {
 		super(props);
@@ -77,6 +80,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		this.state = {
 			script: null,
 			scriptContentJson: '',
+			scriptActionUIs: [],
 			schema: null,
 			isNewScript: false,
 			isValidContent: true,
@@ -85,8 +89,8 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			isLoading: true,
 			hasError: false,
 			userMessage: '',
-			expandedIndices: [],
-			allSubactionsExpanded: false,
+			allExpanded: false,
+			allCollapsed: true,
 			isEditingProperties: false
 		};
 	}
@@ -115,6 +119,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 				this.setState({
 					script: loadedScript,
 					schema: schema,
+					scriptActionUIs: this._buildScriptActionUIs(loadedScript),
 					isNewScript: loadedScript.Id ? false : true,
 					isLoading: false,
 					isInvalidSchema: false,
@@ -140,6 +145,52 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			// Initialize the content
 			return this._initializeScriptContent(script);
 		}
+	}
+
+	private _buildScriptActionUIs(script: ISiteScript, allCollapsed?:boolean, allExpanded?:boolean ): ISiteScriptActionUIWrapper[] {
+		let { scriptActionUIs} = this.state;
+		const checkIsExpanded = (actionKey: string, parentActionKey: string) => {
+      if (allExpanded == true) {
+        return true;
+      }
+      if (allCollapsed == true) {
+        return false;
+      }
+      let foundAction = null;
+			if (scriptActionUIs && scriptActionUIs.length) {
+        if (parentActionKey) {
+          let parentAction = _.find(scriptActionUIs, (sau) => sau.key == parentActionKey);
+          if (parentAction && parentAction.subactions) {
+            foundAction = _.find(parentAction.subactions, (sau) => sau.key == actionKey);
+          }
+        } else {
+          foundAction = _.find(scriptActionUIs, (sau) => sau.key == actionKey);
+        }
+
+				return foundAction && foundAction.isExpanded;
+			} else {
+				return false;
+			}
+		};
+
+		const mapper: (
+			action: ISiteScriptAction,
+			index: number,
+			parentActionKey?: string
+		) => ISiteScriptActionUIWrapper = (action, index, parentActionKey) => {
+			let actionKey = `${parentActionKey ? parentActionKey + '_' : ''}ACT_${index}`;
+			return {
+				key: actionKey,
+        action: action,
+				isExpanded: checkIsExpanded(actionKey, parentActionKey),
+				parentActionKey: parentActionKey,
+				subactions: !action.subactions
+					? null
+					: action.subactions.map((subaction, subactionIndex) => mapper(subaction, subactionIndex, actionKey))
+			};
+		};
+
+		return script.Content.actions.map((action, index) => mapper(action, index));
 	}
 
 	public render(): React.ReactElement<ISiteScriptEditorProps> {
@@ -214,15 +265,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	}
 
 	private _renderEditor() {
-		let {
-			script,
-			schema,
-			scriptContentJson,
-			isInvalidSchema,
-			isValidContent,
-			allSubactionsExpanded,
-			expandedIndices
-		} = this.state;
+		let { script, scriptActionUIs, schema, scriptContentJson, isInvalidSchema, isValidContent } = this.state;
 
 		const codeEditor = (
 			<div className="ms-Grid-row">
@@ -245,12 +288,12 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 					<div className="ms-Grid-row">
 						<ScriptActionCollectionEditor
 							serviceScope={this.props.serviceScope}
-							actions={script.Content.actions as ISiteScriptAction[]}
-							onActionRemoved={(actionIndex) => this._removeScriptAction(actionIndex)}
-							onActionMoved={(oldIndex, newIndex) => this._moveAction(oldIndex, newIndex)}
-							onActionChanged={(actionIndex, action) => this._onActionUpdated(actionIndex, action)}
-							expandedIndices={expandedIndices}
-							onExpandChanged={(expanded) => this._onExpandChanged(expanded)}
+							actionUIs={scriptActionUIs}
+							onActionRemoved={(actionKey) => this._removeScriptAction(actionKey)}
+							onActionMoved={(actionKey, oldIndex, newIndex, parentActionKey) =>
+								this._moveAction(actionKey, parentActionKey, oldIndex, newIndex)}
+							onActionChanged={(actionKey, action) => this._onActionUpdated(actionKey, action)}
+							onExpandChanged={(actionUI) => this._onExpandChanged(actionUI)}
 							getActionSchema={(action) => this.siteScriptSchemaService.getActionSchema(action)}
 						/>
 					</div>
@@ -288,13 +331,13 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	}
 
 	private _getCommands() {
-		let { script, editMode, isValidContent, expandedIndices } = this.state;
-    let actionsCount = script.Content.actions.length;
-    const undoBtn: IContextualMenuItem = {
+		let { script, editMode, isValidContent, allExpanded, allCollapsed } = this.state;
+		let actionsCount = script.Content.actions.length;
+		const undoBtn: IContextualMenuItem = {
 			key: 'undoBtn',
 			text: 'Undo',
-      title: 'Undo',
-      disabled: !this._canUndo(),
+			title: 'Undo',
+			disabled: !this._canUndo(),
 			iconProps: { iconName: 'Undo' },
 			onClick: () => this._undo()
 		};
@@ -316,7 +359,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			key: 'expandAllBtn',
 			text: 'Expand All',
 			title: 'Expand All',
-			disabled: expandedIndices.length == actionsCount,
+			disabled: allExpanded,
 			iconProps: { iconName: 'ExploreContent' },
 			onClick: () => this._setAllExpanded(true)
 		};
@@ -324,12 +367,12 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			key: 'btnCollapseAll',
 			text: 'Collapse All',
 			title: 'Collapse All',
-			disabled: expandedIndices.length == 0,
+			disabled: allCollapsed,
 			iconProps: { iconName: 'CollapseContent' },
 			onClick: () => this._setAllExpanded(false)
 		};
 
-		let commands = [undoBtn];
+		let commands = [ undoBtn ];
 
 		if (isValidContent) {
 			commands = commands.concat(saveBtn, editBtn);
@@ -343,7 +386,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	}
 
 	private _getFarCommands() {
-		let { script, editMode, isValidContent, expandedIndices } = this.state;
+		let { script, editMode, isValidContent } = this.state;
 		let actionsCount = script.Content.actions.length;
 
 		const designModeButton: IContextualMenuItem = {
@@ -374,10 +417,12 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	}
 
 	private _setAllExpanded(isExpanded: boolean) {
-		let { expandedIndices, script } = this.state;
+		let { script } = this.state;
 		let actions = script.Content.actions;
 		this.setState({
-			expandedIndices: isExpanded ? actions.map((item, index) => index) : []
+			allExpanded: isExpanded,
+      allCollapsed: !isExpanded,
+      scriptActionUIs: this._buildScriptActionUIs(script, !isExpanded, isExpanded)
 		});
 	}
 
@@ -391,35 +436,74 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		});
 	}
 
-	private _onExpandChanged(expandedIndices: number[]) {
+	private _onExpandChanged(actionUI: ISiteScriptActionUIWrapper) {
+		let { scriptActionUIs } = this.state;
+
+    let allExpanded = true;
+    let allCollapsed = false;
+		const mapper: (mapActionUI: ISiteScriptActionUIWrapper) => ISiteScriptActionUIWrapper = (mapActionUI) => {
+      allExpanded = allExpanded && mapActionUI.isExpanded;
+      allCollapsed = !allCollapsed && !mapActionUI.isExpanded;
+      if (mapActionUI.key == actionUI.key) {
+				return actionUI;
+			} else {
+				let newActionUI = assign({}, mapActionUI);
+				if (mapActionUI.subactions && mapActionUI.subactions.length) {
+					newActionUI.subactions = mapActionUI.subactions.map(mapper);
+				}
+				return newActionUI;
+			}
+		};
+
+		let newActionUIs = scriptActionUIs.map(mapper);
 		this.setState({
-			expandedIndices: expandedIndices
+      scriptActionUIs: newActionUIs,
+      allExpanded: allExpanded,
+      allCollapsed: allCollapsed
 		});
 	}
-	private _moveAction(oldIndex: number, newIndex: number) {
-		let { script, expandedIndices } = this.state;
-		if (newIndex < 0 || newIndex > script.Content.actions.length - 1) {
-			return;
+
+	private _moveAction(actionKey: string, parentActionKey: string, oldIndex: number, newIndex: number) {
+		let { script, scriptActionUIs } = this.state;
+
+		let newActions: ISiteScriptActionUIWrapper[] = null;
+		if (parentActionKey) {
+			let parentActionUI = _.find(scriptActionUIs, (a) => a.key == parentActionKey);
+			if (parentActionUI) {
+        parentActionUI = assign({}, parentActionUI);
+				let newSubActions = [].concat(parentActionUI.subactions) as ISiteScriptActionUIWrapper[];
+				let actionToMove = _.find(newSubActions, (a) => a.key == actionKey);
+				newSubActions.splice(oldIndex, 1);
+        newSubActions.splice(newIndex, 0, actionToMove);
+        parentActionUI.subactions = newSubActions;
+        newActions = scriptActionUIs.map(sau => sau.key == parentActionKey ? parentActionUI : sau);
+			}
+		} else {
+			newActions = [].concat(scriptActionUIs);
+			let actionToMove = _.find(newActions, (a) => a.key == actionKey);
+			newActions.splice(oldIndex, 1);
+			newActions.splice(newIndex, 0, actionToMove);
 		}
 
-		let newActions = [].concat(script.Content.actions);
-		let actionToMove = newActions[oldIndex];
-		// If the moved item is expanded
-		if (expandedIndices.indexOf(oldIndex) > -1) {
-			expandedIndices = expandedIndices.filter((a) => a != oldIndex).concat(newIndex);
-		}
-		newActions.splice(oldIndex, 1);
-		newActions.splice(newIndex, 0, actionToMove);
+		const mapper: (mapActionUI: ISiteScriptActionUIWrapper) => ISiteScriptAction = (mapActionUI) => {
+			let action = mapActionUI.action;
+			if (mapActionUI.subactions && mapActionUI.subactions.length) {
+				action.subactions = mapActionUI.subactions.map(mapper);
+			}
+			return action;
+		};
+
 		let newContent = assign({}, script.Content);
-		newContent.actions = newActions;
+    newContent.actions = newActions.map(mapper);
+    console.log("newActions: ", newContent.actions);
 		let newScript = assign({}, script);
 		newScript.Content = newContent;
 
-    this._saveToStateHistory();
+		this._saveToStateHistory();
 		this.setState({
 			script: newScript,
-			scriptContentJson: JSON.stringify(newScript.Content, null, 2),
-			expandedIndices: expandedIndices
+			scriptActionUIs: this._buildScriptActionUIs(newScript),
+			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
 		});
 	}
 
@@ -429,60 +513,68 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			verb: verb
 		};
 
+		// TODO New item is expanded by default, all others go collapsed
+
 		let newActionsArray = [].concat(script.Content.actions, newAction);
 		let newScriptContent = assign({}, script.Content);
 		newScriptContent.actions = newActionsArray;
 		let newScript = assign({}, script);
-    newScript.Content = newScriptContent;
-    this._saveToStateHistory();
+		newScript.Content = newScriptContent;
+		this._saveToStateHistory();
 		this.setState({
 			script: newScript,
-			scriptContentJson: JSON.stringify(newScript.Content, null, 2),
-			expandedIndices: [ newActionsArray.length - 1 ]
-		});
-	}
-
-	private _removeScriptAction(actionIndex: number) {
-		let { script } = this.state;
-		let newActionsArray = script.Content.actions.filter((item, index) => index != actionIndex);
-		let newScriptContent = assign({}, script.Content);
-		newScriptContent.actions = newActionsArray;
-		let newScript = assign({}, script);
-    newScript.Content = newScriptContent;
-    this._saveToStateHistory();
-		this.setState({
-			script: newScript,
+			scriptActionUIs: this._buildScriptActionUIs(newScript),
 			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
 		});
 	}
 
-	private _onActionUpdated(actionKey: number, action: ISiteScriptAction) {
-		let { script } = this.state;
+	private _removeScriptAction(actionKey: string) {
+		let { script, scriptActionUIs } = this.state;
+		let newActionsArray = scriptActionUIs.filter((item) => item.key != actionKey).map((a) => a.action);
+		let newScriptContent = assign({}, script.Content);
+		newScriptContent.actions = newActionsArray;
+		let newScript = assign({}, script);
+		newScript.Content = newScriptContent;
+		this._saveToStateHistory();
+		this.setState({
+			script: newScript,
+			scriptActionUIs: this._buildScriptActionUIs(newScript),
+			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
+		});
+	}
+
+	private _onActionUpdated(actionKey: string, action: ISiteScriptAction) {
+		let { script, scriptActionUIs } = this.state;
 		let newScript: ISiteScript = assign({}, script);
 		let newScriptContent = assign({}, script.Content);
 
 		newScriptContent.actions = [].concat(newScriptContent.actions);
 
-		// Replace the appropriate action
-		newScriptContent.actions[actionKey] = action;
+    // Replace the appropriate action
+    // let actionIndex = _.findIndex(scriptActionUIs, a => a.key == actionKey);
+		// newScriptContent.actions[actionIndex] = action;
 
-    newScript.Content = newScriptContent;
 
-    this._saveToStateHistory();
+		newScriptContent.actions = scriptActionUIs.map(
+			(sa) => (sa.key == actionKey ? action : sa.action)
+		);
+
+		newScript.Content = newScriptContent;
+
+		this._saveToStateHistory();
 		this.setState({
 			script: newScript,
+			scriptActionUIs: this._buildScriptActionUIs(newScript),
 			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
 		});
 	}
 
 	private _onCodeUpdated(code: string, errors: any) {
-		console.log('Erros: ', errors);
 
 		let { script, schema } = this.state;
 
 		// Validate the schema
 		let parsedCode = JSON.parse(code);
-		console.log('Object to validate: ', parsedCode);
 		let valid = ajv.validate(schema, parsedCode);
 		if (!valid) {
 			console.log('Schema is not valid');
@@ -500,10 +592,11 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 
 			let newScriptContent = parsedCode;
 
-      newScript.Content = newScriptContent;
+			newScript.Content = newScriptContent;
 
 			this.setState({
 				script: newScript,
+				scriptActionUIs: this._buildScriptActionUIs(newScript),
 				scriptContentJson: JSON.stringify(newScript.Content, null, 2),
 				isValidContent: true,
 				hasError: false,
@@ -546,15 +639,15 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		this.setState({ isLoading: true, isEditingProperties: false });
 		this.siteDesignsService
 			.saveSiteScript(script)
-			.then((_) => {
+			.then(() => {
 				this.setState({
 					isEditingProperties: false,
 					isNewScript: false,
 					isLoading: false,
 					hasError: false,
 					userMessage: 'The site script have been properly saved'
-        });
-        this._clearStateHistory();
+				});
+				this._clearStateHistory();
 			})
 			.catch((error) => {
 				this.setState({
@@ -599,35 +692,36 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			isEditingProperties: false,
 			isNewScript: false
 		});
-  }
+	}
 
-  private _saveToStateHistory() {
-    if (!this.stateHistory) {
-      this.stateHistory = [];
-    }
+	private _saveToStateHistory() {
+    console.log(`Save state history:` , this.state);
+		if (!this.stateHistory) {
+			this.stateHistory = [];
+		}
 
-    if (this.stateHistory.length > 10) {
-      this.stateHistory.splice(9, 1);
-    }
+		if (this.stateHistory.length > 10) {
+			this.stateHistory.splice(9, 1);
+		}
 
-    this.stateHistory.splice(0,0, this.state);
-  }
+		this.stateHistory.splice(0, 0, this.state);
+	}
 
-private _clearStateHistory() {
-  this.stateHistory = null;
-}
+	private _clearStateHistory() {
+		this.stateHistory = null;
+	}
 
-  private _undo() {
-    if (!this.stateHistory || this.stateHistory.length == 0) {
-      return;
-    }
+	private _undo() {
+		if (!this.stateHistory || this.stateHistory.length == 0) {
+			return;
+		}
 
-    let previousState = this.stateHistory[0];
-    this.stateHistory.splice(0, 1);
-    this.setState(previousState);
-  }
+		let previousState = this.stateHistory[0];
+		this.stateHistory.splice(0, 1);
+		this.setState(previousState);
+	}
 
-  private _canUndo() : boolean {
-    return this.stateHistory && this.stateHistory.length > 0;
-  }
+	private _canUndo(): boolean {
+		return this.stateHistory && this.stateHistory.length > 0;
+	}
 }

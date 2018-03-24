@@ -14,6 +14,7 @@ import {
 } from '../../services/siteScriptSchema/SiteScriptSchemaService';
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
 import ScriptActionEditor from './ScriptActionEditor';
+import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
 
 interface ISortStartEventArgs {
 	node: any;
@@ -21,7 +22,7 @@ interface ISortStartEventArgs {
 	collection: any[];
 }
 
-interface ISOrtEndEventArgs {
+interface ISortEndEventArgs {
 	oldIndex: number;
 	newIndex: number;
 	collection: any[];
@@ -30,12 +31,12 @@ interface ISOrtEndEventArgs {
 export interface IScriptActionCollectionEditorState {}
 
 export interface IScriptActionCollectionEditorProps extends IServiceConsumerComponentProps {
-	actions: ISiteScriptAction[];
-	onActionChanged?: (actionIndex: number, action: ISiteScriptAction) => void;
-	onActionRemoved?: (actionIndex: number) => void;
-	onActionMoved?: (oldActionIndex: number, newActionIndex: number) => void;
-	expandedIndices: number[];
-	onExpandChanged?: (expandedIndices: number[], parentAction?: ISiteScriptAction) => void;
+  parentActionUI?: ISiteScriptActionUIWrapper;
+	actionUIs: ISiteScriptActionUIWrapper[];
+	onActionChanged?: (actionKey: string, action: ISiteScriptAction) => void;
+	onActionRemoved?: (actionKey: string) => void;
+	onActionMoved?: (actionKey: string, oldActionIndex: number, newActionIndex: number, parentActionKey?:string) => void;
+	onExpandChanged?: (actionUI: ISiteScriptActionUIWrapper) => void;
 	getActionSchema?: (action: ISiteScriptAction) => any;
 }
 
@@ -61,8 +62,8 @@ export default class ScriptActionCollectionEditor extends React.Component<
 	}
 
 	public render(): React.ReactElement<IScriptActionCollectionEditorProps> {
-		let { actions, serviceScope, onActionChanged } = this.props;
-		console.log('ACTIONS= ', actions);
+		let { actionUIs, serviceScope, onActionChanged } = this.props;
+		console.log('ACTIONS= ', actionUIs);
 
 		const SortableListContainer = SortableContainer(({ items }) => {
 			return <div>{items.map((value, index) => this._renderActionEditorWithCommands(value, index))}</div>;
@@ -70,52 +71,36 @@ export default class ScriptActionCollectionEditor extends React.Component<
 
 		return (
 			<SortableListContainer
-				items={actions}
+				items={actionUIs}
 				onSortStart={(args) => this._onSortStart(args)}
-        onSortEnd={(args) => this._onSortEnd(args)}
-        lockToContainerEdges={true}
+				onSortEnd={(args) => this._onSortEnd(args)}
+				lockToContainerEdges={true}
 				useDragHandle={true}
 			/>
 		);
 	}
 
-  // private sortedItemIsExpanded: boolean;
-  // private isSorting: boolean = null;
+	// private sortedItemIsExpanded: boolean;
+	// private isSorting: boolean = null;
 	private _onSortStart(args: ISortStartEventArgs) {
-    // this.sortedItemIsExpanded = this._isExpanded(args.index);
+		// this.sortedItemIsExpanded = this._isExpanded(args.index);
     // this.isSorting = true;
 	}
 
-	private _onSortEnd(args: ISOrtEndEventArgs) {
-    let wasPreviousExpanded = this._isExpanded(args.oldIndex);
-		this._moveAction(args.oldIndex, args.newIndex);
-    // Set the initial collapse status of the item
-    // this.isSorting = false;
-    // this._setExpanded(args.newIndex, this.sortedItemIsExpanded);
-    // this._setExpanded(args.oldIndex, wasPreviousExpanded)
-    // this.sortedItemIsExpanded = null;
+	private _onSortEnd(args: ISortEndEventArgs) {
+    let movedItem = this.props.actionUIs[args.oldIndex];
+		this._moveAction(movedItem.key, args.oldIndex, args.newIndex);
 	}
 
-	private _setExpanded(actionIndex: number, expanded: boolean) {
-		let { expandedIndices } = this.props;
-		let expandedWoCurrent = expandedIndices.filter((i) => i != actionIndex);
-		expandedIndices = expanded ? expandedWoCurrent.concat(actionIndex) : expandedWoCurrent;
-
-		if (this.props.onExpandChanged) {
-			this.props.onExpandChanged(expandedIndices);
-		}
-	}
-
-	private _renderActionEditorWithCommands(action: ISiteScriptAction, actionIndex: number) {
-		let { expandedIndices, getActionSchema } = this.props;
-		let actionSchema = getActionSchema(action);
+	private _renderActionEditorWithCommands(actionUI: ISiteScriptActionUIWrapper, actionIndex: number) {
+		let { getActionSchema } = this.props;
+		let actionSchema = getActionSchema(actionUI.action);
 
 		const DragHandle = SortableHandle(() => (
 			<h2 className={styles.title}>{this._getActionNameFromActionSchema(actionSchema)}</h2>
 		));
 
-		let isExpanded = this._isExpanded(actionIndex);
-		let expandCollapseIcon = isExpanded ? 'CollapseContentSingle' : 'ExploreContentSingle';
+		let expandCollapseIcon = actionUI.isExpanded ? 'CollapseContentSingle' : 'ExploreContentSingle';
 		const SortableItem = SortableElement(({ value }) => (
 			<div>
 				<div className={styles.scriptActionEditor}>
@@ -128,31 +113,31 @@ export default class ScriptActionCollectionEditor extends React.Component<
 								<div className={styles.commandButtons}>
 									<IconButton
 										iconProps={{ iconName: expandCollapseIcon }}
-										onClick={() => this._toggleExpanded(actionIndex)}
+										onClick={() => this._toggleExpanded(actionUI)}
 									/>
 									<IconButton
 										iconProps={{ iconName: 'ChromeClose' }}
-										onClick={() => this._removeAction(actionIndex)}
+										onClick={() => this._removeAction(actionUI.key)}
 									/>
 								</div>
 							</div>
 						</div>
 					</div>
-					{isExpanded && (
+					{actionUI.isExpanded && (
 						<ScriptActionEditor
-							allSubactionsExpanded={true}
 							serviceScope={this.props.serviceScope}
-							action={value}
+							actionUI={value}
 							schema={actionSchema}
-							expandedSubActions={[]}
-							onActionChanged={(updated) => this._onActionUpdated(actionIndex, updated)}
+              onActionChanged={(updated) => this._onActionUpdated(actionUI.key, updated)}
+              onSubActionMoved={(actionKey, oldIndex, newIndex) => this._moveAction(actionKey, oldIndex, newIndex, actionUI.key)}
+							onExpandChanged={() => this._onActionExpandChanged(actionUI)}
 						/>
 					)}
 				</div>
 			</div>
 		));
 
-		return <SortableItem key={`item-${actionIndex}`} index={actionIndex} value={action} />;
+		return <SortableItem key={`item-${actionIndex}`} index={actionIndex} value={actionUI} />;
 	}
 
 	private _getActionNameFromActionSchema(actionSchema: any): string {
@@ -172,29 +157,31 @@ export default class ScriptActionCollectionEditor extends React.Component<
 		return actionDefinition.properties.verb.enum[0];
 	}
 
-	private _isExpanded(actionIndex: number): boolean {
-		let { expandedIndices } = this.props;
-		return expandedIndices.indexOf(actionIndex) > -1;
-	}
-	private _toggleExpanded(actionIndex: number) {
-		let isExpanded = this._isExpanded(actionIndex);
-		this._setExpanded(actionIndex, !isExpanded);
+	private _toggleExpanded(actionUI: ISiteScriptActionUIWrapper) {
+		actionUI.isExpanded = !actionUI.isExpanded;
+		this._onActionExpandChanged(actionUI);
 	}
 
-	private _removeAction(actionIndex: number) {
+	private _removeAction(actionKey: string) {
 		if (this.props.onActionRemoved) {
-			this.props.onActionRemoved(actionIndex);
+			this.props.onActionRemoved(actionKey);
 		}
 	}
 
-	private _onActionUpdated(actionIndex: number, action: ISiteScriptAction) {
+	private _onActionUpdated(actionKey: string, action: ISiteScriptAction) {
 		if (this.props.onActionChanged) {
-			this.props.onActionChanged(actionIndex, action);
+			this.props.onActionChanged(actionKey, action);
 		}
 	}
-	private _moveAction(oldIndex: number, newIndex: number) {
+	private _moveAction(actionKey: string, oldIndex: number, newIndex: number, parentActionKey?: string) {
 		if (this.props.onActionMoved) {
-			this.props.onActionMoved(oldIndex, newIndex);
+			this.props.onActionMoved(actionKey, oldIndex, newIndex, parentActionKey);
+		}
+	}
+
+	private _onActionExpandChanged(actionUI: ISiteScriptActionUIWrapper) {
+		if (this.props.onExpandChanged) {
+			this.props.onExpandChanged(actionUI);
 		}
 	}
 }

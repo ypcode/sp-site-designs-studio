@@ -14,18 +14,17 @@ import {
 } from '../../services/siteScriptSchema/SiteScriptSchemaService';
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
 import ScriptActionCollectionEditor from './ScriptActionCollectionEditor';
+import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
+import _ = require('lodash');
 
-export interface IScriptActionEditorState {
-
-}
+export interface IScriptActionEditorState {}
 
 export interface IScriptActionEditorProps extends IServiceConsumerComponentProps {
-	action: ISiteScriptAction;
+	actionUI: ISiteScriptActionUIWrapper;
 	schema: any;
-  allSubactionsExpanded: boolean;
-  expandedSubActions: number[];
-  onSubActionsExpandChanged?: (expanded: number[]) => void;
 	onActionChanged?: (action: ISiteScriptAction) => void;
+	onSubActionMoved?: (actionKey: string, oldIndex: number, newIndex: number) => void;
+	onExpandChanged?: (actionUI: ISiteScriptActionUIWrapper) => void;
 }
 
 export default class ScriptActionEditor extends React.Component<IScriptActionEditorProps, IScriptActionEditorState> {
@@ -40,8 +39,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 			this.siteDesignsService = this.props.serviceScope.consume(SiteDesignsServiceKey);
 		});
 
-		this.state = {
-		};
+		this.state = {};
 	}
 
 	public componentWillReceiveProps(nextProps: IScriptActionEditorProps) {
@@ -76,47 +74,35 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		let subactions = parentAction['subactions'] as ISiteScriptAction[];
 		parentAction['subactions'] = [].concat(subactions);
 		this.props.onActionChanged(parentAction);
-  }
-
-  private _getExpandedSubActions() : number[] {
-    let {allSubactionsExpanded, action, expandedSubActions} = this.props;
-    if (action.subactions && action.subactions.length  == 0) {
-      return [];
-    }
-
-    if (this.props.allSubactionsExpanded) {
-      return action.subactions.map((a, i) => i);
-    }
-
-    return expandedSubActions;
-  }
+	}
 
 	public render(): React.ReactElement<IScriptActionEditorProps> {
-		let { action, serviceScope, schema, onActionChanged, expandedSubActions } = this.props;
+		let { actionUI, serviceScope, schema, onActionChanged } = this.props;
 
-		const subactionsRenderer = (subactions: ISiteScriptAction[]) => (
+		const subactionsRenderer = (subactions: ISiteScriptActionUIWrapper[]) => (
 			<div className={styles.subactions}>
 				<h3>{this._translateLabel('subactions')}</h3>
 				<div className={styles.subactionsWorkspace}>
 					<div>
 						<ScriptActionCollectionEditor
 							serviceScope={this.props.serviceScope}
-							actions={subactions}
-							onActionRemoved={(subActionIndex) => this._removeScriptSubAction(action, subActionIndex)}
-							onActionMoved={(oldIndex, newIndex) => this._moveSubAction(action, oldIndex, newIndex)}
-							onActionChanged={(subActionIndex, subAction) =>
-								this._onSubActionUpdated(action, subActionIndex, subAction)}
+							parentActionUI={actionUI}
+							actionUIs={actionUI.subactions}
+							onActionRemoved={(subActionKey) => this._removeScriptSubAction(actionUI, subActionKey)}
+							onActionMoved={(actionKey, oldIndex, newIndex) =>
+								this._moveSubAction(actionKey, oldIndex, newIndex)}
+							onActionChanged={(subActionKey, subAction) =>
+								this._onSubActionUpdated(actionUI, subActionKey, subAction)}
 							getActionSchema={(subAction) =>
-								this.siteScriptSchemaService.getSubActionSchema(action, subAction)}
-							expandedIndices={this._getExpandedSubActions()}
-							onExpandChanged={(expanded) => this._onSubActionsExpandChanged(expanded)}
+								this.siteScriptSchemaService.getSubActionSchema(actionUI.action, subAction)}
+							onExpandChanged={(expandedAction) => this._onActionExpandChanged(expandedAction)}
 						/>
 					</div>
 					<div>
 						<ScriptActionAdder
-							parentAction={action}
+							parentAction={actionUI.action}
 							serviceScope={serviceScope}
-							onActionAdded={(a) => this._addScriptSubAction(action, a)}
+							onActionAdded={(a) => this._addScriptSubAction(actionUI.action, a)}
 						/>
 					</div>
 				</div>
@@ -129,31 +115,21 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 					<GenericObjectEditor
 						customRenderers={{ subactions: subactionsRenderer }}
 						defaultValues={{ subactions: [] }}
-						object={action}
+						object={actionUI.action}
 						schema={schema}
 						ignoredProperties={[ 'verb' ]}
-            onObjectChanged={onActionChanged.bind(this)}
-            updateOnBlur={true}
+						onObjectChanged={onActionChanged.bind(this)}
+						updateOnBlur={true}
 					/>
 				</div>
 			</div>
 		);
 	}
 
-	private _moveSubAction(parentAction: ISiteScriptAction, oldIndex: number, newIndex: number) {
-		if (newIndex < 0 || newIndex > parentAction.subactions.length - 1) {
-			return;
+	private _moveSubAction(actionKey: string, oldIndex: number, newIndex: number) {
+		if (this.props.onSubActionMoved) {
+			this.props.onSubActionMoved(actionKey, oldIndex, newIndex);
 		}
-
-		let newSubActions = [].concat(parentAction.subactions);
-
-    let actionToMove = newSubActions[oldIndex];
-    newSubActions.splice(oldIndex, 1);
-    newSubActions.splice(newIndex, 0, actionToMove);
-
-		let updatedAction = assign({}, parentAction);
-		updatedAction.subactions = newSubActions;
-		this.props.onActionChanged(updatedAction);
 	}
 
 	private _addScriptSubAction(parentAction: ISiteScriptAction, verb: string) {
@@ -168,29 +144,32 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		this.props.onActionChanged(updatedAction);
 	}
 
-	private _removeScriptSubAction(parentAction: ISiteScriptAction, subActionKey: number) {
-		let newSubActions = parentAction.subactions.filter((item, index) => index != subActionKey);
-		let updatedAction = assign({}, parentAction);
+	private _removeScriptSubAction(parentAction: ISiteScriptActionUIWrapper, subActionKey: string) {
+		let newSubActions = parentAction.subactions
+			.filter((subactionUI) => subactionUI.key != subActionKey)
+			.map((ui) => ui.action);
+		let updatedAction = assign({}, parentAction.action);
 		updatedAction.subactions = newSubActions;
 		this.props.onActionChanged(updatedAction);
 	}
 
-	private _onSubActionsExpandChanged(expanded: number[]) {
-		if (this.props.onSubActionsExpandChanged) {
-      this.props.onSubActionsExpandChanged(expanded);
-    }
+	private _onActionExpandChanged(actionUI: ISiteScriptActionUIWrapper) {
+		if (this.props.onExpandChanged) {
+			this.props.onExpandChanged(actionUI);
+		}
 	}
 
 	private _onSubActionUpdated(
-		parentAction: ISiteScriptAction,
-		subActionKey: number,
+		parentAction: ISiteScriptActionUIWrapper,
+		subActionKey: string,
 		updatedSubAction: ISiteScriptAction
 	) {
-		let subAction = assign({}, parentAction.subactions[subActionKey], updatedSubAction);
+		let existingSubActionUI = _.find(parentAction.subactions, (s) => s.key == subActionKey);
+		let subAction = assign({}, existingSubActionUI.action, updatedSubAction);
 
-		let updatedParentAction = assign({}, parentAction);
+		let updatedParentAction = assign({}, parentAction.action);
 		updatedParentAction.subactions = parentAction.subactions.map(
-			(sa, ndx) => (ndx == subActionKey ? subAction : sa)
+			(sa) => (sa.key == subActionKey ? subAction : sa.action)
 		);
 		this.props.onActionChanged(updatedParentAction);
 	}
