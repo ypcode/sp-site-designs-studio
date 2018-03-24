@@ -79,35 +79,40 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 	public render(): React.ReactElement<IScriptActionEditorProps> {
 		let { actionUI, serviceScope, schema, onActionChanged } = this.props;
 
-		const subactionsRenderer = (subactions: ISiteScriptActionUIWrapper[]) => (
-			<div className={styles.subactions}>
-				<h3>{this._translateLabel('subactions')}</h3>
-				<div className={styles.subactionsWorkspace}>
-					<div>
-						<ScriptActionCollectionEditor
-							serviceScope={this.props.serviceScope}
-							parentActionUI={actionUI}
-							actionUIs={actionUI.subactions}
-							onActionRemoved={(subActionKey) => this._removeScriptSubAction(actionUI, subActionKey)}
-							onActionMoved={(actionKey, oldIndex, newIndex) =>
-								this._moveSubAction(actionKey, oldIndex, newIndex)}
-							onActionChanged={(subActionKey, subAction) =>
-								this._onSubActionUpdated(actionUI, subActionKey, subAction)}
-							getActionSchema={(subAction) =>
-								this.siteScriptSchemaService.getSubActionSchema(actionUI.action, subAction)}
-							onExpandChanged={(expandedAction) => this._onActionExpandChanged(expandedAction)}
-						/>
-					</div>
-					<div>
-						<ScriptActionAdder
-							parentAction={actionUI.action}
-							serviceScope={serviceScope}
-							onActionAdded={(a) => this._addScriptSubAction(actionUI.action, a)}
-						/>
+		const subactionsRenderer = (subactions: ISiteScriptActionUIWrapper[]) => {
+			if (!actionUI.subactions) {
+				actionUI.subactions = [];
+			}
+			return (
+				<div className={styles.subactions}>
+					<h3>{this._translateLabel('subactions')}</h3>
+					<div className={styles.subactionsWorkspace}>
+						<div>
+							<ScriptActionCollectionEditor
+								serviceScope={this.props.serviceScope}
+								parentActionUI={actionUI}
+								actionUIs={actionUI.subactions}
+								onActionRemoved={(subActionKey) => this._removeScriptSubAction(actionUI, subActionKey)}
+								onActionMoved={(actionKey, oldIndex, newIndex) =>
+									this._moveSubAction(actionKey, oldIndex, newIndex)}
+								onActionChanged={(subActionKey, subAction) =>
+									this._onSubActionUpdated(actionUI, subActionKey, subAction)}
+								getActionSchema={(subAction) =>
+									this.siteScriptSchemaService.getSubActionSchema(actionUI.action, subAction)}
+								onExpandChanged={(expandedAction) => this._onActionExpandChanged(expandedAction)}
+							/>
+						</div>
+						<div>
+							<ScriptActionAdder
+								parentAction={actionUI.action}
+								serviceScope={serviceScope}
+								onActionAdded={(a) => this._addScriptSubAction(actionUI.action, a)}
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
-		);
+			);
+		};
 
 		return (
 			<div className="ms-Grid-row">

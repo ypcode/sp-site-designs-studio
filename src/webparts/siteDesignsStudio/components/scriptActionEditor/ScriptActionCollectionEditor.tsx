@@ -93,7 +93,7 @@ export default class ScriptActionCollectionEditor extends React.Component<
 	}
 
 	private _renderActionEditorWithCommands(actionUI: ISiteScriptActionUIWrapper, actionIndex: number) {
-		let { getActionSchema } = this.props;
+    let { getActionSchema } = this.props;
 		let actionSchema = getActionSchema(actionUI.action);
 
 		const DragHandle = SortableHandle(() => (

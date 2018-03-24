@@ -152,10 +152,16 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 	}
 
 	private _renderPropertyEditor(propertyName: string, property: ISchemaProperty) {
-		let { schema, object, customRenderers } = this.props;
+		let { schema, object, customRenderers, defaultValues } = this.props;
 
 		// Has custom renderer for the property
 		if (customRenderers && customRenderers[propertyName]) {
+
+      // If a default value is specified for current property and it is null, apply it
+      if (!object[propertyName] && defaultValues && defaultValues[propertyName]) {
+        object[propertyName] = defaultValues[propertyName];
+      }
+
 			return customRenderers[propertyName](object[propertyName]);
 		}
 

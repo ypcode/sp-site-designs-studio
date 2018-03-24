@@ -15,12 +15,12 @@
 
   "preconfiguredEntries": [{
     "groupId": "5c03119e-3074-46fd-976b-c60198311f70", // Other
-    "group": { "default": "Other" },
-    "title": { "default": "SiteDesignsStudio" },
+    "group": { "default": "Tools" },
+    "title": { "default": "Site Designs Studio" },
     "description": { "default": "A WebPart allowing to build graphically and easily Site Designs scripts for any user" },
     "officeFabricIconFontName": "Page",
     "properties": {
-
+      "siteDesignSchema": null
     }
   }]
 }

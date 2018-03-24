@@ -158,13 +158,19 @@
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   }
 
-	.codeEditorContainer {
 
-		.codeEditor {
-			width: 98%;
-      min-height: 372px;
-      max-height: 500px;
-			box-sizing: border-box;
-		}
-	}
+}
+
+.codeEditorContainer {
+
+  .codeEditor {
+    width: 98%;
+    min-height: 372px;
+    max-height: 500px;
+    box-sizing: border-box;
+  }
+}
+
+.settingsDialogContent {
+  width: 500px;
 }
