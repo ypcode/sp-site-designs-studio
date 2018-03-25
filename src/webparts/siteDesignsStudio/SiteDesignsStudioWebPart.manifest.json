@@ -18,7 +18,7 @@
     "group": { "default": "Tools" },
     "title": { "default": "Site Designs Studio" },
     "description": { "default": "A WebPart allowing to build graphically and easily Site Designs scripts for any user" },
-    "officeFabricIconFontName": "Page",
+    "officeFabricIconFontName": "Design",
     "properties": {
       "siteDesignSchema": null
     }
