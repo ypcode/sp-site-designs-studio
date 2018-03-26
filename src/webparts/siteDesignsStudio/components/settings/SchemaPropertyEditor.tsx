@@ -17,7 +17,7 @@ import { assign } from '@microsoft/sp-lodash-subset';
 
 import styles from '../SiteDesignsStudio.module.scss';
 import * as strings from 'SiteDesignsStudioWebPartStrings';
-import { HttpClient } from '@microsoft/sp-webpart-base/node_modules/@microsoft/sp-http';
+import { HttpClient } from '@microsoft/sp-http';
 import { IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
 
 const jsonSchemaDraft06 = require('ajv/lib/refs/json-schema-draft-06.json');
