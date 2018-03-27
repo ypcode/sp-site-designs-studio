@@ -20,7 +20,7 @@ import {
 	IContextualMenuItem
 } from 'office-ui-fabric-react';
 import styles from '../SiteDesignsStudio.module.scss';
-import { escape, assign } from '@microsoft/sp-lodash-subset';
+import { escape, assign, find } from '@microsoft/sp-lodash-subset';
 
 import ScriptActionEditor from '../scriptActionEditor/ScriptActionEditor';
 import { ISiteScriptContent, ISiteScriptAction, ISiteScript, SiteScriptEntitySchema } from '../../models/ISiteScript';
@@ -36,7 +36,6 @@ import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
 import { MonacoEditor } from '../monacoEditor/MonacoEditor';
 import ScriptActionCollectionEditor from '../scriptActionEditor/ScriptActionCollectionEditor';
 import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
-import _ = require('lodash');
 
 const Ajv = require('ajv');
 var ajv = new Ajv({ schemaId: 'auto' });
@@ -159,12 +158,12 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
       let foundAction = null;
 			if (scriptActionUIs && scriptActionUIs.length) {
         if (parentActionKey) {
-          let parentAction = _.find(scriptActionUIs, (sau) => sau.key == parentActionKey);
+          let parentAction = find(scriptActionUIs, (sau) => sau.key == parentActionKey);
           if (parentAction && parentAction.subactions) {
-            foundAction = _.find(parentAction.subactions, (sau) => sau.key == actionKey);
+            foundAction = find(parentAction.subactions, (sau) => sau.key == actionKey);
           }
         } else {
-          foundAction = _.find(scriptActionUIs, (sau) => sau.key == actionKey);
+          foundAction = find(scriptActionUIs, (sau) => sau.key == actionKey);
         }
 
 				return foundAction && foundAction.isExpanded;
@@ -468,11 +467,11 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 
 		let newActions: ISiteScriptActionUIWrapper[] = null;
 		if (parentActionKey) {
-			let parentActionUI = _.find(scriptActionUIs, (a) => a.key == parentActionKey);
+			let parentActionUI = find(scriptActionUIs, (a) => a.key == parentActionKey);
 			if (parentActionUI) {
         parentActionUI = assign({}, parentActionUI);
 				let newSubActions = [].concat(parentActionUI.subactions) as ISiteScriptActionUIWrapper[];
-				let actionToMove = _.find(newSubActions, (a) => a.key == actionKey);
+				let actionToMove = find(newSubActions, (a) => a.key == actionKey);
 				newSubActions.splice(oldIndex, 1);
         newSubActions.splice(newIndex, 0, actionToMove);
         parentActionUI.subactions = newSubActions;
@@ -480,7 +479,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			}
 		} else {
 			newActions = [].concat(scriptActionUIs);
-			let actionToMove = _.find(newActions, (a) => a.key == actionKey);
+			let actionToMove = find(newActions, (a) => a.key == actionKey);
 			newActions.splice(oldIndex, 1);
 			newActions.splice(newIndex, 0, actionToMove);
 		}
@@ -549,11 +548,6 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		let newScriptContent = assign({}, script.Content);
 
 		newScriptContent.actions = [].concat(newScriptContent.actions);
-
-    // Replace the appropriate action
-    // let actionIndex = _.findIndex(scriptActionUIs, a => a.key == actionKey);
-		// newScriptContent.actions[actionIndex] = action;
-
 
 		newScriptContent.actions = scriptActionUIs.map(
 			(sa) => (sa.key == actionKey ? action : sa.action)

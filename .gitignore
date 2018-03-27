@@ -13,6 +13,9 @@ solution
 temp
 *.sppkg
 
+# Include .sppkg from /package
+!/package/site-designs-studio.sppkg
+
 # Coverage directory used by tools like istanbul
 coverage
 

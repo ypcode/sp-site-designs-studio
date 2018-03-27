@@ -1,4 +1,4 @@
-import { autobind } from 'office-ui-fabric-react/lib/Utilities';
+import { autobind } from 'office-ui-fabric-react';
 import * as React from 'react';
 
 import styles from '../../components/SiteDesignsStudio.module.scss';

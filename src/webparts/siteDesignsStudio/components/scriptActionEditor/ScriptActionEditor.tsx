@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Dropdown, TextField, Toggle, Link, IconButton } from 'office-ui-fabric-react';
 import styles from './ScriptActionEditor.module.scss';
-import { escape, assign } from '@microsoft/sp-lodash-subset';
+import { escape, assign, find } from '@microsoft/sp-lodash-subset';
 import * as strings from 'SiteDesignsStudioWebPartStrings';
 import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
 
@@ -15,7 +15,6 @@ import {
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
 import ScriptActionCollectionEditor from './ScriptActionCollectionEditor';
 import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
-import _ = require('lodash');
 
 export interface IScriptActionEditorState {}
 
@@ -169,7 +168,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		subActionKey: string,
 		updatedSubAction: ISiteScriptAction
 	) {
-		let existingSubActionUI = _.find(parentAction.subactions, (s) => s.key == subActionKey);
+		let existingSubActionUI = find(parentAction.subactions, (s) => s.key == subActionKey);
 		let subAction = assign({}, existingSubActionUI.action, updatedSubAction);
 
 		let updatedParentAction = assign({}, parentAction.action);
