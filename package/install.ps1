@@ -6,10 +6,7 @@ param (
   [switch]$RequireInstall=$false
 )
 
-$ctx = Get-PnPContext -ErrorAction SilentlyContinue
-if (!$ctx) {
-  Connect-PnPOnline -Url $Url
-}
+Connect-PnPOnline -Url $Url
 
 ################################################
 # DO NOT CHANGE THE FOLLOWING PARAMETERS
