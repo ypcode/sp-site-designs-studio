@@ -5,6 +5,8 @@ declare interface ISiteDesignsStudioWebPartStrings {
   SchemaPropertyEditorOkButtonLabel: string;
   SchemaPropertyEditorCancelButtonLabel: string;
   SchemaPropertyEditorDialogTitle: string;
+  PropertyIsComplexTypeMessage: string;
+  UseJsonEditorMessage:string;
 }
 
 declare module 'SiteDesignsStudioWebPartStrings' {

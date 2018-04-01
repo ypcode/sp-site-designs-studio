@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dropdown, TextField, Toggle } from 'office-ui-fabric-react';
+import { Dropdown, TextField, Toggle, Label, Icon } from 'office-ui-fabric-react';
 import styles from '../SiteDesignsStudio.module.scss';
 import { escape, assign } from '@microsoft/sp-lodash-subset';
 
@@ -17,8 +17,8 @@ export interface IGenericObjectEditorProps {
 	customRenderers?: any;
 	ignoredProperties?: string[];
 	readOnlyProperties?: string[];
-  onObjectChanged?: (object: any) => void;
-  updateOnBlur?: boolean;
+	onObjectChanged?: (object: any) => void;
+	updateOnBlur?: boolean;
 }
 
 export default class GenericObjectEditor extends React.Component<IGenericObjectEditorProps, {}> {
@@ -76,9 +76,9 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 				case 'boolean':
 					return false;
 				case 'number':
-          return 0;
-          case 'object':
-          return {};
+					return 0;
+				case 'object':
+					return {};
 				default:
 					return null;
 			}
@@ -134,21 +134,20 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 
 	private editTextValues: any;
 	private _onTextFieldValueChanged(fieldName: string, value: any) {
-    if (this.props.updateOnBlur) {
-      if (!this.editTextValues) {
-        this.editTextValues = {};
-      }
-      this.editTextValues[fieldName] = value;
-    }
-		else {
-      this._onObjectPropertyChange(fieldName, value);
-    }
+		if (this.props.updateOnBlur) {
+			if (!this.editTextValues) {
+				this.editTextValues = {};
+			}
+			this.editTextValues[fieldName] = value;
+		} else {
+			this._onObjectPropertyChange(fieldName, value);
+		}
 	}
 
 	private _onTextFieldEdited(fieldName: string) {
-    let value = this.editTextValues[fieldName];
-    this._onObjectPropertyChange(fieldName, value);
-    delete this.editTextValues[fieldName];
+		let value = this.editTextValues[fieldName];
+		this._onObjectPropertyChange(fieldName, value);
+		delete this.editTextValues[fieldName];
 	}
 
 	private _renderPropertyEditor(propertyName: string, property: ISchemaProperty) {
@@ -156,11 +155,10 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 
 		// Has custom renderer for the property
 		if (customRenderers && customRenderers[propertyName]) {
-
-      // If a default value is specified for current property and it is null, apply it
-      if (!object[propertyName] && defaultValues && defaultValues[propertyName]) {
-        object[propertyName] = defaultValues[propertyName];
-      }
+			// If a default value is specified for current property and it is null, apply it
+			if (!object[propertyName] && defaultValues && defaultValues[propertyName]) {
+				object[propertyName] = defaultValues[propertyName];
+			}
 
 			return customRenderers[propertyName](object[propertyName]);
 		}
@@ -184,8 +182,8 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 						label={this._translateLabel(propertyName)}
 						value={object[propertyName]}
 						readOnly={true}
-            onChanged={(value) => this._onTextFieldValueChanged(propertyName, value)}
-            onBlur={() => this._onTextFieldEdited(propertyName)}
+						onChanged={(value) => this._onTextFieldValueChanged(propertyName, value)}
+						onBlur={() => this._onTextFieldEdited(propertyName)}
 					/>
 				);
 			}
@@ -200,6 +198,26 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 							onChanged={(value) => this._onObjectPropertyChange(propertyName, value)}
 						/>
 					);
+				case 'object':
+					return (
+						<div>
+							<div className="ms-Grid-row">
+								<div className="ms-Grid-col ms-sm12">
+									<Label>{this._translateLabel(propertyName)}</Label>
+								</div>
+							</div>
+							<div className="ms-Grid-row">
+								<div className="ms-Grid-col ms-sm2">
+									<Icon iconName="InfoSolid" className={styles.infoIcon} />
+								</div>
+								<div className="ms-Grid-col ms-sm10">
+									{strings.PropertyIsComplexTypeMessage}
+									<br />
+									{strings.UseJsonEditorMessage}
+								</div>
+							</div>
+						</div>
+					);
 				case 'number':
 				case 'string':
 				default:
@@ -208,8 +226,8 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 							label={this._translateLabel(propertyName)}
 							value={object[propertyName]}
 							readOnly={this._isPropertyReadOnly(propertyName)}
-              onChanged={(value) => this._onTextFieldValueChanged(propertyName, value)}
-              onBlur={() => this._onTextFieldEdited(propertyName)}
+							onChanged={(value) => this._onTextFieldValueChanged(propertyName, value)}
+							onBlur={() => this._onTextFieldEdited(propertyName)}
 						/>
 					);
 			}

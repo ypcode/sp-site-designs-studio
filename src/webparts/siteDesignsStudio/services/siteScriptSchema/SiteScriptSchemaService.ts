@@ -4,7 +4,7 @@ import { ServiceScope, ServiceKey } from '@microsoft/sp-core-library';
 import { HttpClient, SPHttpClient } from '@microsoft/sp-http';
 
 export interface ISiteScriptSchemaService {
-	configure(schemaJSONorURL?: string, forceReconfigure?:boolean): Promise<any>;
+	configure(schemaJSONorURL?: string, forceReconfigure?: boolean): Promise<any>;
 	getNewSiteScript(): any;
 	getSiteScriptSchema(): any;
 	getActionSchema(action: ISiteScriptAction): any;
@@ -68,7 +68,7 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 		);
 	}
 
-	public configure(schemaJSONorURL?: string, forceReconfigure:boolean=false): Promise<void> {
+	public configure(schemaJSONorURL?: string, forceReconfigure: boolean = false): Promise<void> {
 		return new Promise((resolve, reject) => {
 			if (this.isConfigured && !forceReconfigure) {
 				resolve();
@@ -77,13 +77,12 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 
 			this._loadSchema(schemaJSONorURL)
 				.then((schema) => {
-          if (!schema) {
-            reject('Schema cannot be found');
-            return;
-          }
+					if (!schema) {
+						reject('Schema cannot be found');
+						return;
+					}
 
-          console.log("::::::::LOADED SCHEMA::::::::: ", schema);
-          this.schema = schema;
+					this.schema = schema;
 					try {
 						// Get available action schemas
 						let actionsArraySchema = this.schema.properties.actions;
@@ -222,23 +221,22 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 		return new Promise((resolve, reject) => {
 			// If argument is not set, use the embedded default schema
 			if (!schemaJSONorURL) {
-        console.log("ARGUMENT NOT SET");
 				resolve(DefaultSchema);
 				return;
-			} else if (
+			}
+
+			if (
 				schemaJSONorURL.indexOf('/') == 0 ||
 				schemaJSONorURL.indexOf('http://') == 0 ||
 				schemaJSONorURL.indexOf('https://') == 0
 			) {
 				// The argument is a URL
-        // Fetch the schema at the specified URL
-        console.log("ARGUMENT IS A URL");
+				// Fetch the schema at the specified URL
 				this._getSchemaFromUrl(schemaJSONorURL).then((schema) => resolve(schema)).catch((error) => {
 					console.error('An error occured while trying to fetch schema from URL', error);
 					reject(error);
 				});
 			} else {
-        console.log("ARGUMENT IS STRINGiFIED JSON");
 				// The argument is supposed to be JSON stringified
 				try {
 					let schema = JSON.parse(schemaJSONorURL);
@@ -252,14 +250,14 @@ export class SiteScriptSchemaService implements ISiteScriptSchemaService {
 	}
 
 	private _getSchemaFromUrl(url: string): Promise<any> {
-		let spHttpClient: SPHttpClient = this.serviceScope.consume(SPHttpClient.serviceKey);
-    return spHttpClient.get(url, SPHttpClient.configurations.v1)
-    .then((v) => {
-      console.log('Received: ', v);
-      return v.json();
-    }).catch(error => {
-      console.log('An error occured here', error);
-    });
+		// Use spHttpClient if it is a SPO URL, use regular httpClient otherwise
+		if (url.indexOf('.sharepoint.com') > -1) {
+			let spHttpClient: SPHttpClient = this.serviceScope.consume(SPHttpClient.serviceKey);
+			return spHttpClient.get(url, SPHttpClient.configurations.v1).then((v) => v.json());
+		} else {
+			let httpClient: HttpClient = this.serviceScope.consume(HttpClient.serviceKey);
+			return httpClient.get(url, HttpClient.configurations.v1).then((v) => v.json());
+		}
 	}
 }
 

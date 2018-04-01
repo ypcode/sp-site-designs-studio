@@ -33,7 +33,8 @@
 		display: block;
 		width: 100%;
 		min-height: 50px;
-		cursor: pointer;
+    cursor: pointer;
+    overflow-x: hidden;
 
 		.actionIcon {
 			display: inline-block;

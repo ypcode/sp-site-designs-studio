@@ -6,6 +6,8 @@ define([], function() {
     SchemaPropertyEditorCancelButtonLabel: 'Cancel',
     SchemaPropertyEditorOkButtonLabel: 'Ok',
     SchemaPropertyEditorDialogTitle: 'Set the schema',
+    PropertyIsComplexTypeMessage: 'This value is a complex object type',
+    UseJsonEditorMessage: 'Use the JSON editor instead',
 		LABEL_createSPList: 'Create a List',
 		LABEL_setSiteLogo: 'Set the site Logo',
 		LABEL_joinHubSite: 'Join a Hub Site',
