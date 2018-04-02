@@ -7,6 +7,8 @@ declare interface ISiteDesignsStudioWebPartStrings {
   SchemaPropertyEditorDialogTitle: string;
   PropertyIsComplexTypeMessage: string;
   UseJsonEditorMessage:string;
+  NoAvailableThemes:string;
+  LoadingLabel: string;
 }
 
 declare module 'SiteDesignsStudioWebPartStrings' {

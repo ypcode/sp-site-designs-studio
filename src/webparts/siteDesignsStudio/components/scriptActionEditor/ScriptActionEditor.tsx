@@ -15,6 +15,7 @@ import {
 import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteDesigns/SiteDesignsService';
 import ScriptActionCollectionEditor from './ScriptActionCollectionEditor';
 import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
+import ThemeInputField from '../wizards/inputFields/ThemeInputField';
 
 export interface IScriptActionEditorState {}
 
@@ -59,14 +60,37 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		return actionDefinition.properties.verb.enum[0];
 	}
 
+	private _getLabelFromActionProperty(actionDefinition: any, propertyName: string): string {
+		let propertyMetadata = actionDefinition.properties[propertyName];
+		if (!propertyMetadata) {
+			return this._tryTranslateProperty(propertyName);
+		}
+
+		return propertyMetadata.title || propertyName;
+	}
+
+	private _getDescriptionFromActionProperty(actionDefinition: any, propertyName: string): string {
+		let propertyMetadata = actionDefinition.properties[propertyName];
+		if (!propertyMetadata) {
+			return '';
+		}
+
+		return propertyMetadata.description || propertyName;
+	}
+
 	private _getCurrentActionName(): string {
 		let { schema } = this.props;
 		return this._getVerbFromActionSchema(schema);
 	}
 
-	private _translateLabel(value: string): string {
+	private _tryTranslateLabel(value: string): string {
 		const key = 'LABEL_' + value;
 		return strings[key] || value;
+	}
+
+	private _tryTranslateProperty(propertyName: string): string {
+		const key = 'PROP_' + propertyName;
+		return strings[key] || propertyName;
 	}
 
 	private _onSubActionAdded(parentAction: ISiteScriptAction, subAction: ISiteScriptAction) {
@@ -75,7 +99,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 		this.props.onActionChanged(parentAction);
 	}
 
-	public render(): React.ReactElement<IScriptActionEditorProps> {
+	private _getCustomRenderers() {
 		let { actionUI, serviceScope, schema, onActionChanged } = this.props;
 
 		const subactionsRenderer = (subactions: ISiteScriptActionUIWrapper[]) => {
@@ -84,7 +108,7 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 			}
 			return (
 				<div className={styles.subactions}>
-					<h3>{this._translateLabel('subactions')}</h3>
+					<h3>{this._tryTranslateLabel('subactions')}</h3>
 					<div className={styles.subactionsWorkspace}>
 						<div>
 							<ScriptActionCollectionEditor
@@ -113,11 +137,27 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 			);
 		};
 
+		return {
+			subactions: subactionsRenderer,
+			themeName: (value) => (
+				<ThemeInputField
+					serviceScope={serviceScope}
+					label={this._getLabelFromActionProperty(schema, 'themeName')}
+					value={value}
+					onValueChanged={(v) => this._onActionPropertyChanged('themeName', v)}
+				/>
+			)
+		};
+	}
+
+	public render(): React.ReactElement<IScriptActionEditorProps> {
+		let { actionUI, serviceScope, schema, onActionChanged } = this.props;
+
 		return (
 			<div className="ms-Grid-row">
 				<div className="ms-Grid-col ms-sm12">
 					<GenericObjectEditor
-						customRenderers={{ subactions: subactionsRenderer }}
+						customRenderers={this._getCustomRenderers()}
 						defaultValues={{ subactions: [] }}
 						object={actionUI.action}
 						schema={schema}
@@ -176,5 +216,14 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 			(sa) => (sa.key == subActionKey ? subAction : sa.action)
 		);
 		this.props.onActionChanged(updatedParentAction);
+	}
+
+	private _onActionPropertyChanged(propertyName: string, value: any) {
+		let { actionUI, onActionChanged } = this.props;
+		if (onActionChanged) {
+			let updatedAction = assign({}, actionUI.action);
+			updatedAction[propertyName] = value;
+			onActionChanged(updatedAction);
+		}
 	}
 }

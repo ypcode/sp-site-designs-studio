@@ -1,4 +1,4 @@
-export default {
+{
   "$schema": "http://json-schema.org/draft-06/schema#",
 	"title": "SiteScript",
 	"description": "A SharePoint Site Script definition",
@@ -273,4 +273,4 @@ export default {
 	"required": [
 		"actions", "bindata", "version"
 	]
-};
+}

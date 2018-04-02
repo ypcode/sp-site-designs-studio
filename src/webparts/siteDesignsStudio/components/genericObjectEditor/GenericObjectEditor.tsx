@@ -145,9 +145,11 @@ export default class GenericObjectEditor extends React.Component<IGenericObjectE
 	}
 
 	private _onTextFieldEdited(fieldName: string) {
-		let value = this.editTextValues[fieldName];
-		this._onObjectPropertyChange(fieldName, value);
-		delete this.editTextValues[fieldName];
+		let value = this.editTextValues && this.editTextValues[fieldName];
+    this._onObjectPropertyChange(fieldName, value);
+    if (value) {
+      delete this.editTextValues[fieldName];
+    }
 	}
 
 	private _renderPropertyEditor(propertyName: string, property: ISchemaProperty) {

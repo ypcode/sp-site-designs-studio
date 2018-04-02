@@ -8,6 +8,8 @@ define([], function() {
     SchemaPropertyEditorDialogTitle: 'Set the schema',
     PropertyIsComplexTypeMessage: 'This value is a complex object type',
     UseJsonEditorMessage: 'Use the JSON editor instead',
+    NoAvailableThemes: 'No available themes...',
+    LoadingLabel: 'Loading...',
 		LABEL_createSPList: 'Create a List',
 		LABEL_setSiteLogo: 'Set the site Logo',
 		LABEL_joinHubSite: 'Join a Hub Site',
