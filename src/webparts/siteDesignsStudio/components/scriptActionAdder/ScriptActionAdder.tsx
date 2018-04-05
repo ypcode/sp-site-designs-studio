@@ -72,6 +72,12 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 		return strings[key] || value;
 	}
 
+	private _getActionLabel(actionVerb: string): string {
+		let parentAction = this.props.parentAction;
+		// Specify the parent action verb if any
+		return this.siteScriptSchemaService.getActionTitleByVerb(actionVerb, parentAction && parentAction.verb);
+	}
+
 	public render(): React.ReactElement<ISiteDesignsStudioProps> {
 		let { isLoading } = this.state;
 		return (
@@ -107,7 +113,7 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 											</div>
 											<div className="ms-Grid-col ms-sm8">
 												<div className={styles.actionButtonLabel}>
-													{this._translateLabel(a)}
+													{this._getActionLabel(a)}
 												</div>
 											</div>
 										</div>

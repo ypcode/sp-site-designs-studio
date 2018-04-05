@@ -90,7 +90,7 @@ export default class SiteDesignsStudioWebPart extends BaseClientSideWebPart<ISit
 									onSchemaPropertyChanged: (value) =>
 										this.onPropertyChanged('siteDesignSchema', value),
 									value: this.properties.siteDesignSchema,
-									serviceScope: this.usedServiceScope
+                  serviceScope: this.usedServiceScope
 								})
 							]
 						}

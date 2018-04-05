@@ -16,6 +16,7 @@ import { ISiteDesignsService, SiteDesignsServiceKey } from '../../services/siteD
 import ScriptActionCollectionEditor from './ScriptActionCollectionEditor';
 import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
 import ThemeInputField from '../wizards/inputFields/ThemeInputField';
+import HubSiteInputField from '../wizards/inputFields/HubSiteInputField';
 
 export interface IScriptActionEditorState {}
 
@@ -146,6 +147,14 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 					value={value}
 					onValueChanged={(v) => this._onActionPropertyChanged('themeName', v)}
 				/>
+			),
+			hubSiteId: (value) => (
+				<HubSiteInputField
+					serviceScope={serviceScope}
+					label={this._getLabelFromActionProperty(schema, 'hubSiteId')}
+					value={value}
+					onValueChanged={(v) => this._onActionPropertyChanged('hubSiteId', v)}
+				/>
 			)
 		};
 	}
@@ -163,7 +172,8 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 						schema={schema}
 						ignoredProperties={[ 'verb' ]}
 						onObjectChanged={onActionChanged.bind(this)}
-						updateOnBlur={true}
+            updateOnBlur={true}
+            fieldLabelGetter={f => this._getLabelFromActionProperty(schema, f)}
 					/>
 				</div>
 			</div>
@@ -221,7 +231,8 @@ export default class ScriptActionEditor extends React.Component<IScriptActionEdi
 	private _onActionPropertyChanged(propertyName: string, value: any) {
 		let { actionUI, onActionChanged } = this.props;
 		if (onActionChanged) {
-			let updatedAction = assign({}, actionUI.action);
+      let updatedAction = assign({}, actionUI.action);
+      console.log('Action property changed', propertyName, value);
 			updatedAction[propertyName] = value;
 			onActionChanged(updatedAction);
 		}

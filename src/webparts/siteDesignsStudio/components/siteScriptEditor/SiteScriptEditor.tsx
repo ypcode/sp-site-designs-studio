@@ -721,7 +721,6 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	}
 
 	private _saveToStateHistory() {
-		console.log(`Save state history:`, this.state);
 		if (!this.stateHistory) {
 			this.stateHistory = [];
 		}

@@ -1,15 +1,15 @@
+import { IHubSite } from './../../models/IHubSite';
 import { ServiceScope, ServiceKey } from '@microsoft/sp-core-library';
 import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration } from '@microsoft/sp-http';
-import { ITheme } from '../../models/ITheme';
 
-export interface IThemeService {
+export interface IHubSitesService {
 	baseUrl: string;
-	getCustomThemes(): Promise<ITheme[]>;
+	getHubSites(): Promise<IHubSite[]>;
 }
 
-export class ThemeService implements IThemeService {
+export class HubSitesService implements IHubSitesService {
 	private spHttpClient: SPHttpClient;
-	private cachedResults: ITheme[];
+	private cachedResults: IHubSite[];
 
 	constructor(serviceScope: ServiceScope) {
 		this.spHttpClient = new SPHttpClient(serviceScope);
@@ -21,17 +21,16 @@ export class ThemeService implements IThemeService {
 		return (this.baseUrl + '//' + relativeUrl).replace(/\/{2,}/, '/');
 	}
 
-	private _restRequest(url: string, params: any = null): Promise<any> {
+	private _restRequest(url: string): Promise<any> {
 		const restUrl = this._getEffectiveUrl(url);
 		const options: ISPHttpClientOptions = {
-			body: JSON.stringify(params),
 			headers: {
 				'Content-Type': 'application/json;charset=utf-8',
 				ACCEPT: 'application/json; odata.metadata=minimal',
 				'ODATA-VERSION': '4.0'
 			}
 		};
-		return this.spHttpClient.post(restUrl, SPHttpClient.configurations.v1, options).then((response) => {
+		return this.spHttpClient.get(restUrl, SPHttpClient.configurations.v1, options).then((response) => {
 			if (response.status == 204) {
 				return {};
 			} else {
@@ -40,16 +39,20 @@ export class ThemeService implements IThemeService {
 		});
 	}
 
-	public getCustomThemes(): Promise<ITheme[]> {
+	public getHubSites(): Promise<IHubSite[]> {
 		if (this.cachedResults && this.cachedResults.length > 0) {
 			return Promise.resolve(this.cachedResults);
 		} else {
-			return this._restRequest('/_api/thememanager/GetTenantThemingOptions').then((resp) => {
-				this.cachedResults = resp.themePreviews as ITheme[];
+			return this._restRequest('/_api/hubSites').then((resp) => {
+				console.log('HubSites response ', resp);
+				this.cachedResults = resp.value.map((hubSite) => ({
+					title: hubSite.Title,
+					id: hubSite.ID
+				}));
 				return this.cachedResults;
 			});
 		}
 	}
 }
 
-export const ThemeServiceKey = ServiceKey.create<IThemeService>('YPCODE:ThemeService', ThemeService);
+export const HubSitesServiceKey = ServiceKey.create<IHubSitesService>('YPCODE:HubSitesService', HubSitesService);
