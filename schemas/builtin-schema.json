@@ -391,7 +391,10 @@
             "ExternalUserAndGuestSharing"
           ]
         }
-      }
+      },
+      "required": [
+        "verb", "capability"
+      ]
     }
   },
   "type": "object",

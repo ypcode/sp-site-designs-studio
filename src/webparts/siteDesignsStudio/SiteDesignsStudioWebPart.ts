@@ -54,7 +54,7 @@ export default class SiteDesignsStudioWebPart extends BaseClientSideWebPart<ISit
 	}
 
 	protected get dataVersion(): Version {
-		return Version.parse('1.0');
+		return Version.parse('1.1');
 	}
 
 	private onPropertyChanged(propertyPath: string, newValue: any): void {

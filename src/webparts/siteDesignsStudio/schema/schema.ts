@@ -359,7 +359,7 @@ export default {
 			required: [ 'verb', 'url', 'name' ]
 		},
 		setSiteExternalSharingCapability: {
-      type:'object',
+			type: 'object',
 			title: getActionTitle('setSiteExternalSharingCapability', 'Set site external sharing capability'),
 			description: getActionDescription(
 				'setSiteExternalSharingCapability',
@@ -370,8 +370,16 @@ export default {
 					enum: [ 'setSiteExternalSharingCapability' ]
 				},
 				capability: {
-					title: getPropertyTitle('capability', 'setSiteExternalSharingCapability', 'External sharing capability'),
-					description: getPropertyDescription('capability', 'setSiteExternalSharingCapability', 'The defined external sharing capability'),
+					title: getPropertyTitle(
+						'capability',
+						'setSiteExternalSharingCapability',
+						'External sharing capability'
+					),
+					description: getPropertyDescription(
+						'capability',
+						'setSiteExternalSharingCapability',
+						'The defined external sharing capability'
+					),
 					enum: [
 						'Disabled',
 						'ExistingExternalUserSharingOnly',
@@ -379,7 +387,8 @@ export default {
 						'ExternalUserAndGuestSharing'
 					]
 				}
-			}
+			},
+			required: [ 'verb', 'capability' ]
 		}
 	},
 	type: 'object',
@@ -394,8 +403,8 @@ export default {
 					{ type: 'object', $ref: '#/definitions/applyTheme' },
 					{ type: 'object', $ref: '#/definitions/setSiteLogo' },
 					{ type: 'object', $ref: '#/definitions/joinHubSite' },
-          { type: 'object', $ref: '#/definitions/triggerFlow' },
-          { type: 'object', $ref: '#/definitions/setSiteExternalSharingCapability' }
+					{ type: 'object', $ref: '#/definitions/triggerFlow' },
+					{ type: 'object', $ref: '#/definitions/setSiteExternalSharingCapability' }
 				]
 			}
 		},

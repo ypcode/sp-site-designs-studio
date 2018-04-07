@@ -1,12 +1,9 @@
 import * as React from 'react';
 import { SortableContainer, SortableHandle, SortableElement } from 'react-sortable-hoc';
-import { Dropdown, TextField, Toggle, Link, IconButton } from 'office-ui-fabric-react';
+import { Toggle, IconButton } from 'office-ui-fabric-react';
 import styles from './ScriptActionEditor.module.scss';
-import { escape, assign } from '@microsoft/sp-lodash-subset';
-import * as strings from 'SiteDesignsStudioWebPartStrings';
 
 import { ISiteScriptAction } from '../../models/ISiteScript';
-import ScriptActionAdder from '../scriptActionAdder/ScriptActionAdder';
 import { IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
 import {
 	ISiteScriptSchemaService,

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { IconButton, Icon, Panel, PanelType, Spinner, SpinnerSize } from 'office-ui-fabric-react';
 import styles from './ScriptActionAdder.module.scss';
-import * as strings from 'SiteDesignsStudioWebPartStrings';
 import { ISiteDesignsStudioProps, IServiceConsumerComponentProps } from '../ISiteDesignsStudioProps';
 import { escape, assign } from '@microsoft/sp-lodash-subset';
 
@@ -65,11 +64,6 @@ export default class ScriptActionAdder extends React.Component<IScriptActionAdde
 	private _onActionAdded(action: string) {
 		this.props.onActionAdded(action);
 		this._onPanelDismiss();
-	}
-
-	private _translateLabel(value: string): string {
-		const key = 'LABEL_' + value;
-		return strings[key] || value;
 	}
 
 	private _getActionLabel(actionVerb: string): string {

@@ -36,6 +36,7 @@ import GenericObjectEditor from '../genericObjectEditor/GenericObjectEditor';
 import { MonacoEditor } from '../monacoEditor/MonacoEditor';
 import ScriptActionCollectionEditor from '../scriptActionEditor/ScriptActionCollectionEditor';
 import { ISiteScriptActionUIWrapper } from '../../models/ISiteScriptActionUIWrapper';
+import CreateListWizard from '../wizards/CreateListWizard';
 
 const Ajv = require('ajv');
 var ajv = new Ajv({ schemaId: 'auto' });
@@ -59,6 +60,8 @@ export interface ISiteScriptEditorState {
 	hasError: boolean;
 	userMessage: string;
 	isEditingProperties: boolean;
+	isAddingAction: boolean;
+	addingActionVerb: string;
 	allExpanded: boolean;
 	allCollapsed: boolean;
 }
@@ -90,7 +93,9 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			userMessage: '',
 			allExpanded: false,
 			allCollapsed: true,
-			isEditingProperties: false
+			isEditingProperties: false,
+			isAddingAction: false,
+			addingActionVerb: null
 		};
 	}
 
@@ -118,7 +123,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 				this.setState({
 					script: loadedScript,
 					schema: schema,
-					scriptActionUIs: this._buildScriptActionUIs(loadedScript, false, true),
+					scriptActionUIs: this._buildScriptActionUIs(loadedScript, true, false),
 					isNewScript: loadedScript.Id ? false : true,
 					isLoading: false,
 					isInvalidSchema: false,
@@ -146,13 +151,24 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		}
 	}
 
+	private _getActionKey(index: number, parentActionKey?: string): string {
+		return `${parentActionKey ? parentActionKey + '_' : ''}ACT_${index}`;
+	}
+
 	private _buildScriptActionUIs(
 		script: ISiteScript,
 		allCollapsed?: boolean,
-		allExpanded?: boolean
+		allExpanded?: boolean,
+		singleExpandedActionKey?: string
 	): ISiteScriptActionUIWrapper[] {
 		let { scriptActionUIs } = this.state;
 		const checkIsExpanded = (actionKey: string, parentActionKey: string) => {
+			if (singleExpandedActionKey) {
+				// The action or its parent is expanded
+				const shouldExpand = singleExpandedActionKey.indexOf(actionKey) == 0;
+				return shouldExpand;
+			}
+
 			if (allExpanded == true) {
 				return true;
 			}
@@ -181,7 +197,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			index: number,
 			parentActionKey?: string
 		) => ISiteScriptActionUIWrapper = (action, index, parentActionKey) => {
-			let actionKey = `${parentActionKey ? parentActionKey + '_' : ''}ACT_${index}`;
+			let actionKey = this._getActionKey(index, parentActionKey);
 			return {
 				key: actionKey,
 				action: action,
@@ -197,7 +213,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	}
 
 	public render(): React.ReactElement<ISiteScriptEditorProps> {
-		let { isLoading, isEditingProperties, script, isNewScript, hasError, userMessage } = this.state;
+		let { isLoading, isEditingProperties, script, isNewScript, hasError, userMessage, isAddingAction } = this.state;
 
 		if (isLoading) {
 			return (
@@ -220,6 +236,11 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 					</MessageBar>
 				)}
 
+				{isAddingAction && (
+					<Panel isOpen={true} type={PanelType.medium}>
+						{this._renderNewActionWizard()}
+					</Panel>
+				)}
 				{(isNewScript || isEditingProperties) && this._renderSiteScriptPropertiesEditor()}
 				<div className="ms-Grid-row">
 					<div className="ms-Grid-col ms-sm12">
@@ -326,6 +347,37 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 					</div>
 				);
 		}
+	}
+
+	private _renderNewActionWizard() {
+		let { addingActionVerb } = this.state;
+		let wizard = null;
+		let wizardTitle = null;
+		switch (addingActionVerb) {
+			case 'createSPList':
+				wizardTitle = 'Create a List';
+				wizard = (
+					<CreateListWizard
+						serviceScope={this.props.serviceScope}
+						actionVerb={addingActionVerb}
+						createEmptyDescription={'Create an empty Create List action'}
+						createEmptyLabel={'Empty'}
+						createMagicDescription={'Create from an existing list in this site'}
+						createMagicLabel={'From existing'}
+						onScriptActionGenerated={(action) => this._onActionAdded(action)}
+						onCancel={() => this._cancelWizard()}
+					/>
+				);
+				break;
+			default:
+				break;
+		}
+
+		return (
+			<Panel isOpen={true} type={PanelType.medium} headerText={wizardTitle}>
+				{wizard}
+			</Panel>
+		);
 	}
 
 	private _initializeScriptContent(script: ISiteScript): Promise<ISiteScript> {
@@ -502,10 +554,12 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		let newScript = assign({}, script);
 		newScript.Content = newContent;
 
+		const newActionKey = this._getActionKey(newIndex, parentActionKey);
+
 		this._saveToStateHistory();
 		this.setState({
 			script: newScript,
-			scriptActionUIs: this._buildScriptActionUIs(newScript),
+			scriptActionUIs: this._buildScriptActionUIs(newScript, null, null, newActionKey),
 			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
 		});
 	}
@@ -532,23 +586,51 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		}
 	}
 
-	private _addScriptAction(verb: string) {
-		let { script } = this.state;
+	private _getGenericScriptAction(verb: string): ISiteScriptAction {
 		let newAction: ISiteScriptAction = {
 			verb: verb
 		};
 		let actionSchema = this.siteScriptSchemaService.getActionSchema(newAction);
-    // Add default values for properties of the action
 
+		// Add default values for properties of the action
 		if (actionSchema && actionSchema.properties) {
-			Object.keys(actionSchema.properties).filter(p => p != 'verb').forEach(
-				(p) => (newAction[p] = this._getPropertyDefaultValueFromSchema(actionSchema, p))
-			);
-    }
+			Object.keys(actionSchema.properties)
+				.filter((p) => p != 'verb')
+				.forEach((p) => (newAction[p] = this._getPropertyDefaultValueFromSchema(actionSchema, p)));
+		}
+		console.log('Action Added: ', newAction);
+		return newAction;
+	}
 
-		// TODO New item is expanded by default, all others go collapsed
+	private _hasWizard(verb: string): boolean {
+		const availableWizardsForAction = [ 'createSPList' ];
+		return availableWizardsForAction.indexOf(verb) > -1;
+	}
 
-		let newActionsArray = [].concat(script.Content.actions, newAction);
+	private _cancelWizard() {
+		this.setState({
+			isAddingAction: false,
+			addingActionVerb: null
+		});
+	}
+
+	private _addScriptAction(verb: string) {
+		if (this._hasWizard(verb)) {
+			this.setState({
+				isAddingAction: true,
+				addingActionVerb: verb
+			});
+		} else {
+			this._onActionAdded(this._getGenericScriptAction(verb));
+		}
+	}
+
+	private _onActionAdded(action: ISiteScriptAction) {
+		let { script } = this.state;
+
+		let newActionIndex = script.Content.actions.length;
+		let newActionKey = this._getActionKey(newActionIndex);
+		let newActionsArray = [].concat(script.Content.actions, action);
 		let newScriptContent = assign({}, script.Content);
 		newScriptContent.actions = newActionsArray;
 		let newScript = assign({}, script);
@@ -556,8 +638,10 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		this._saveToStateHistory();
 		this.setState({
 			script: newScript,
-			scriptActionUIs: this._buildScriptActionUIs(newScript),
-			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
+			scriptActionUIs: this._buildScriptActionUIs(newScript, null, null, newActionKey),
+			scriptContentJson: JSON.stringify(newScript.Content, null, 2),
+			isAddingAction: false,
+			addingActionVerb: null
 		});
 	}
 
@@ -581,6 +665,16 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		let newScript: ISiteScript = assign({}, script);
 		let newScriptContent = assign({}, script.Content);
 
+		// Check if the change is an added sub action
+		// Get the action to update
+		let previousAction = find(scriptActionUIs, (sau) => sau.key == actionKey);
+		let previousSubActionsCount = previousAction.subactions && previousAction.subactions.length;
+		let toExpandActionKey = null;
+		if (previousSubActionsCount >= 0 && action.subactions && action.subactions.length > previousSubActionsCount) {
+			// If a subaction is added, get the subaction key
+			toExpandActionKey = this._getActionKey(previousSubActionsCount, actionKey);
+		}
+
 		newScriptContent.actions = [].concat(newScriptContent.actions);
 
 		newScriptContent.actions = scriptActionUIs.map((sa) => (sa.key == actionKey ? action : sa.action));
@@ -590,7 +684,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 		this._saveToStateHistory();
 		this.setState({
 			script: newScript,
-			scriptActionUIs: this._buildScriptActionUIs(newScript),
+			scriptActionUIs: this._buildScriptActionUIs(newScript, null, null, toExpandActionKey),
 			scriptContentJson: JSON.stringify(newScript.Content, null, 2)
 		});
 	}
@@ -598,7 +692,7 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 	private _onCodeUpdated(code: string, errors: any) {
 		let { script, schema, scriptActionUIs } = this.state;
 
-    let wereNoActions = scriptActionUIs.length == 0;
+		let wereNoActions = scriptActionUIs.length == 0;
 		// Validate the schema
 		let parsedCode = JSON.parse(code);
 		let valid = ajv.validate(schema, parsedCode);
@@ -729,7 +823,13 @@ export default class SiteScriptEditor extends React.Component<ISiteScriptEditorP
 			this.stateHistory.splice(9, 1);
 		}
 
-		this.stateHistory.splice(0, 0, this.state);
+		// Remove not relevant state properties
+		let savedState = assign({}, this.state) as any;
+		savedState.addingActionVerb = null;
+		savedState.isAddingAction = false;
+		savedState.isLoading = false;
+
+		this.stateHistory.splice(0, 0, savedState);
 	}
 
 	private _clearStateHistory() {
